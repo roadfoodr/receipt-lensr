@@ -10,31 +10,60 @@ class ReceiptProcessor(ctk.CTk):
         
         # Configure main window
         self.title("Receipt Processor")
-        self.geometry("1280x960")
+        self.geometry("1600x900")  # Landscape window
         
-        # Configure grid layout
+        # Configure grid layout (two columns)
         self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=0)  # Left panel fixed width
+        self.grid_columnconfigure(1, weight=1)  # Right panel expands
         
-        # Create frame for camera preview
-        self.camera_frame = ctk.CTkFrame(self)
+        # Create left frame for camera preview (fixed width)
+        self.camera_frame = ctk.CTkFrame(self, width=500)  # Slightly narrower
         self.camera_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        self.camera_frame.grid_propagate(False)  # Prevent frame from shrinking
         
-        # Create label for camera preview
-        self.camera_label = ctk.CTkLabel(self.camera_frame, text="")
-        self.camera_label.grid(row=0, column=0, padx=10, pady=10)
+        # Configure camera frame grid
+        self.camera_frame.grid_rowconfigure(0, weight=1)  # Preview expands vertically
+        self.camera_frame.grid_columnconfigure(0, weight=1)
         
-        # Create capture button
+        # Create right frame for controls and data
+        self.right_frame = ctk.CTkFrame(self)
+        self.right_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+        self.right_frame.grid_columnconfigure(0, weight=1)
+        
+        # Create label for camera preview with fixed portrait dimensions
+        preview_height = int(self.winfo_height() * 0.8)  # 80% of window height
+        preview_width = int(preview_height * (8.5/11))  # 8.5x11 aspect ratio
+        self.camera_label = ctk.CTkLabel(
+            self.camera_frame,
+            text="",
+            width=preview_width,
+            height=preview_height
+        )
+        self.camera_label.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")  # Fill available space
+        
+        # Create control panel frame at bottom of camera frame
+        self.control_panel = ctk.CTkFrame(self.camera_frame)
+        self.control_panel.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        
+        # Create capture button in control panel
         self.capture_button = ctk.CTkButton(
-            self.camera_frame, 
-            text="Capture (Spacebar)", 
+            self.control_panel,
+            text="Capture (Spacebar)",
             command=self.capture_image
         )
-        self.capture_button.grid(row=1, column=0, padx=10, pady=10)
+        self.capture_button.pack(pady=5)
         
-        # Add status label
-        self.status_label = ctk.CTkLabel(self.camera_frame, text="")
-        self.status_label.grid(row=2, column=0, padx=10, pady=10)
+        # Add status label in control panel
+        self.status_label = ctk.CTkLabel(self.control_panel, text="")
+        self.status_label.pack(pady=5)
+        
+        # Add placeholder text in right panel
+        self.right_label = ctk.CTkLabel(
+            self.right_frame,
+            text="Data and controls will appear here"
+        )
+        self.right_label.grid(row=0, column=0, padx=20, pady=20)
         
         # Bind spacebar to capture
         self.bind('<space>', lambda event: self.capture_image())
@@ -50,13 +79,13 @@ class ReceiptProcessor(ctk.CTk):
     def start_camera(self):
         """Initialize and start the camera feed"""
         try:
-            self.camera = cv2.VideoCapture(0)  # Try first camera
+            self.camera = cv2.VideoCapture(0)
             if not self.camera.isOpened():
                 raise Exception("Could not open camera")
-                
-            # Set resolution (adjust as needed)
-            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            
+            # Set camera resolution - maintain portrait orientation
+            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1080)
+            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1920)
             
             self.camera_running = True
             
@@ -77,9 +106,7 @@ class ReceiptProcessor(ctk.CTk):
         while self.camera_running:
             ret, frame = self.camera.read()
             if ret:
-                # Convert BGR to RGB
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                # If queue full, remove old frame
                 if self.frame_queue.full():
                     self.frame_queue.get()
                 self.frame_queue.put(frame)
@@ -89,12 +116,33 @@ class ReceiptProcessor(ctk.CTk):
         try:
             if not self.frame_queue.empty():
                 frame = self.frame_queue.get()
+                
+                # Rotate the frame 90 degrees counter-clockwise
+                # frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                
                 image = Image.fromarray(frame)
                 
-                # Resize to fit window while maintaining aspect ratio
-                display_size = (1024, 768)  # Larger preview size
-                image.thumbnail(display_size, Image.Resampling.LANCZOS)
+                # Get current label size
+                preview_width = self.camera_label.cget("width")
+                preview_height = self.camera_label.cget("height")
                 
+                # Calculate scaling to fill the preview area while maintaining aspect ratio
+                img_ratio = image.width / image.height
+                preview_ratio = preview_width / preview_height
+                
+                if img_ratio > preview_ratio:
+                    # Image is wider relative to its height than preview area
+                    new_height = preview_height
+                    new_width = int(preview_height * img_ratio)
+                else:
+                    # Image is taller relative to its width than preview area
+                    new_width = preview_width
+                    new_height = int(preview_width / img_ratio)
+                
+                # Resize image
+                image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                
+                # Create photo image and update label
                 photo = ImageTk.PhotoImage(image)
                 self.camera_label.configure(image=photo)
                 self.camera_label.image = photo
@@ -108,23 +156,18 @@ class ReceiptProcessor(ctk.CTk):
     
     def capture_image(self):
         """Capture the current frame"""
-        print("Capture method called")  # Debug print
         try:
             if not self.frame_queue.empty():
-                print("Frame queue not empty")  # Debug print
                 frame = self.frame_queue.get()
-                self.frame_queue.put(frame)  # Put frame back in queue first
+                self.frame_queue.put(frame)
                 
                 # Update status in UI
                 self.status_label.configure(text="Image captured!")
-                print("Status label updated")  # Debug print
+                print("Image captured!")
                 
                 # Clear the message after 2 seconds
                 self.after(2000, lambda: self.status_label.configure(text=""))
-                
-                print("Image captured!")  # Console feedback
             else:
-                print("Frame queue was empty")  # Debug print
                 self.status_label.configure(text="Error: No frame available")
         except Exception as e:
             print(f"Error capturing image: {e}")
