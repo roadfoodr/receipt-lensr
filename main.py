@@ -32,15 +32,13 @@ class ReceiptProcessor(ctk.CTk):
         self.right_frame.grid_columnconfigure(0, weight=1)
         
         # Create label for camera preview with fixed portrait dimensions
-        preview_height = int(self.winfo_height() * 0.8)  # 80% of window height
-        preview_width = int(preview_height * (8.5/11))  # 8.5x11 aspect ratio
         self.camera_label = ctk.CTkLabel(
             self.camera_frame,
             text="",
-            width=preview_width,
-            height=preview_height
+            width=500,  # Fixed width
+            height=800  # Fixed height for portrait orientation
         )
-        self.camera_label.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")  # Fill available space
+        self.camera_label.grid(row=0, column=0, padx=10, pady=10, sticky="n")  # Stick to top
         
         # Create control panel frame at bottom of camera frame
         self.control_panel = ctk.CTkFrame(self.camera_frame)
@@ -83,9 +81,10 @@ class ReceiptProcessor(ctk.CTk):
             if not self.camera.isOpened():
                 raise Exception("Could not open camera")
             
-            # Set camera resolution - maintain portrait orientation
-            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1080)
-            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1920)
+            # Set camera resolution to a more suitable size
+            # Using 1080p resolution in landscape (will be rotated)
+            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
             
             self.camera_running = True
             
@@ -116,17 +115,15 @@ class ReceiptProcessor(ctk.CTk):
         try:
             if not self.frame_queue.empty():
                 frame = self.frame_queue.get()
-                
-                # Rotate the frame 90 degrees counter-clockwise
-                # frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
-                
+                                
+                # Convert to PIL Image
                 image = Image.fromarray(frame)
                 
-                # Get current label size
-                preview_width = self.camera_label.cget("width")
-                preview_height = self.camera_label.cget("height")
+                # Get the actual dimensions of the camera label
+                preview_width = self.camera_label.winfo_width()
+                preview_height = self.camera_label.winfo_height()
                 
-                # Calculate scaling to fill the preview area while maintaining aspect ratio
+                # Calculate scaling while maintaining aspect ratio
                 img_ratio = image.width / image.height
                 preview_ratio = preview_width / preview_height
                 
@@ -141,6 +138,11 @@ class ReceiptProcessor(ctk.CTk):
                 
                 # Resize image
                 image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                
+                # Center the image
+                x_offset = (new_width - preview_width) // 2
+                y_offset = (new_height - preview_height) // 2
+                image = image.crop((x_offset, y_offset, x_offset + preview_width, y_offset + preview_height))
                 
                 # Create photo image and update label
                 photo = ImageTk.PhotoImage(image)
