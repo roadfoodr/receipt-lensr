@@ -2,22 +2,45 @@ Analyze this receipt image and extract the information in JSON format. Include a
 using "not found" for any fields you cannot extract. Return JSON only, no additional text
 or markdown.
 
+Fields to identify:
+- vendor: often in printed text
+- invoice: often in printed text
+- total_amount: often in printed text
+- bill_date: usually in printed text
+- paid_date: (if a string like "PD 12/31/23" is present in handwritten blue text 
+              in upper right area), otherwise look elsewhere for a payment date,
+              otherwise use bill_date
+- payment_method: often in handwritten blue text in upper right area. 
+                  Can be like "CK 1234" or "CK # 2624" or "Ck #2701", 
+                  or "AMEX" (if the word AMEX or American Express is present),
+                  or "PayPal" (if the word PayPal or the PayPal logo is present)
+- item: brief (2-4 words) description of the item, often in printed text
+- project: (if any of the following are present in handwritten blue text 
+            in upper right area: 2716, 2641, 2643, 1400, or other 4-digit numbers)
+- upper_right: all of the blue handwritten text found in the upper right area
+
 Required format:
 {
-    "date": "2024-03-14",
     "vendor": "Store Name",
+    "invoice": "123456",
+    "bill_date": "03/14/2024",
+    "paid_date": "04/17/2024",
+    "payment_method": "Ck 1234",
     "total_amount": 123.45,
-    "items": [{"description": "Item", "amount": 100.00, "quantity": 1}],
-    "category": "Groceries",
-    "tax_amount": 10.00
+    "item": "Item",
+    "project": "2716",
+    "upper_right": "text found in upper right area"
 }
 
 Example with missing fields:
 {
-    "date": "not found",
     "vendor": "Walmart",
+    "invoice": "123456",
     "total_amount": 123.45,
-    "items": [],
-    "category": "not found",
-    "tax_amount": "not found"
+    "item": "not found",
+    "project": "not found",
+    "payment_method": "Ck 1234",
+    "bill_date": "03/14/2024",
+    "paid_date": "04/17/2024",
+    "upper_right": "not found"
 } 

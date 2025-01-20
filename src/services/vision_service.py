@@ -16,13 +16,16 @@ class ReceiptItem:
 
 @dataclass
 class Receipt:
-    date: Optional[datetime]
-    vendor: str
-    total_amount: Optional[float]
-    items: List[ReceiptItem]
-    category: Optional[str] = None
-    tax_amount: Optional[float] = None
-    
+    vendor: Optional[str] = None
+    invoice: Optional[str] = None
+    bill_date: Optional[str] = None
+    paid_date: Optional[str] = None
+    payment_method: Optional[str] = None
+    total_amount: Optional[str] = None
+    item: Optional[str] = None
+    project: Optional[str] = None
+    upper_right: Optional[str] = None
+
 class VisionAPIService:
     def __init__(self, api_key: str = None, use_anthropic: bool = False):
         """Initialize the Vision API service
@@ -154,17 +157,17 @@ class VisionAPIService:
             # Parse the JSON response into our dataclass
             data = json.loads(result)
             
-            # Convert items to ReceiptItem objects
-            items = [ReceiptItem(**item) for item in data.get('items', [])]
-            
-            # Create Receipt object with proper type conversion
+            # Create Receipt object with all fields as strings
             receipt = Receipt(
-                date=datetime.fromisoformat(data['date']) if data['date'] != "not found" else None,
-                vendor=data['vendor'],
-                total_amount=float(data['total_amount']) if data['total_amount'] != "not found" else None,
-                items=items,
-                category=data.get('category'),
-                tax_amount=float(data['tax_amount']) if data['tax_amount'] != "not found" else None
+                vendor=data.get('vendor', 'not found'),
+                invoice=data.get('invoice', 'not found'),
+                bill_date=data.get('bill_date', 'not found'),
+                paid_date=data.get('paid_date', 'not found'),
+                payment_method=data.get('payment_method', 'not found'),
+                total_amount=data.get('total_amount', 'not found'),
+                item=data.get('item', 'not found'),
+                project=data.get('project', 'not found'),
+                upper_right=data.get('upper_right', 'not found')
             )
             
             return receipt
