@@ -3,6 +3,7 @@ import cv2
 from PIL import Image, ImageTk
 import threading
 import queue
+from src.services.vision_service import VisionAPIService, Receipt
 
 class ReceiptProcessor(ctk.CTk):
     def __init__(self):
@@ -65,6 +66,13 @@ class ReceiptProcessor(ctk.CTk):
         
         # Bind spacebar to capture
         self.bind('<space>', lambda event: self.capture_image())
+
+        # Initialize the Vision API Service without explicit api_key
+        # It will load from config automatically
+        self.vision_service = VisionAPIService(use_anthropic=False)
+        
+        # Add debug print to verify key
+        # print(f"Vision service initialized with key: {self.vision_service.api_key[:8]}...") # Only show first 8 chars for security
         
         # Initialize camera variables
         self.camera = None
@@ -157,15 +165,22 @@ class ReceiptProcessor(ctk.CTk):
             self.status_label.configure(text=f"Error: {e}")
     
     def capture_image(self):
-        """Capture the current frame"""
+        """Capture the current frame and analyze it using the Vision API"""
         try:
             if not self.frame_queue.empty():
                 frame = self.frame_queue.get()
-                self.frame_queue.put(frame)
+                self.frame_queue.put(frame)  # Put it back if needed elsewhere
                 
-                # Update status in UI
-                self.status_label.configure(text="Image captured!")
-                print("Image captured!")
+                # Convert frame to bytes
+                _, buffer = cv2.imencode('.jpg', frame)
+                image_bytes = buffer.tobytes()
+                
+                # Analyze the receipt
+                receipt = self.vision_service.analyze_receipt(image_bytes)
+                
+                # Update UI with receipt data
+                self.status_label.configure(text=f"Vendor: {receipt.vendor}, Total: {receipt.total_amount}")
+                print("Receipt analyzed:", receipt)
                 
                 # Clear the message after 2 seconds
                 self.after(2000, lambda: self.status_label.configure(text=""))
