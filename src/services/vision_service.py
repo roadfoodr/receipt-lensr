@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Optional, List
 import requests
 import json
+import os
 
 @dataclass
 class ReceiptItem:
@@ -63,27 +64,9 @@ class VisionAPIService:
         
     def _build_prompt(self, previous_corrections: Optional[dict] = None) -> str:
         """Build the prompt for receipt analysis"""
-        prompt = """Analyze this receipt image and extract the information in JSON format. Include all fields, using "not found" for any fields you cannot extract. Return JSON only, no additional text or markdown.
-
-Required format:
-{
-    "date": "2024-03-14",
-    "vendor": "Store Name",
-    "total_amount": 123.45,
-    "items": [{"description": "Item", "amount": 100.00, "quantity": 1}],
-    "category": "Groceries",
-    "tax_amount": 10.00
-}
-
-Example with missing fields:
-{
-    "date": "not found",
-    "vendor": "Walmart",
-    "total_amount": 123.45,
-    "items": [],
-    "category": "not found",
-    "tax_amount": "not found"
-}"""
+        prompt_path = os.path.join(os.path.dirname(__file__), '..', 'prompts', 'receipt_analysis.txt')
+        with open(prompt_path, 'r') as f:
+            prompt = f.read()
 
         if previous_corrections:
             prompt += "\nPrevious corrections to consider: " + json.dumps(previous_corrections)
