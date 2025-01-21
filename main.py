@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 import threading
 import queue
 from src.services.vision_service import VisionAPIService, Receipt
+from src.utils.config import get_debug_mode
 
 class ReceiptProcessor(ctk.CTk):
     def __init__(self):
@@ -185,9 +186,21 @@ class ReceiptProcessor(ctk.CTk):
                 # Rotate frame 90 degrees counterclockwise
                 frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
                 
+                # Convert to BGR for consistent color handling
+                frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                
                 # Convert frame to bytes
-                _, buffer = cv2.imencode('.jpg', frame)
+                _, buffer = cv2.imencode('.jpg', frame_bgr)
                 image_bytes = buffer.tobytes()
+                
+                # DEBUG: Save the exact image being sent to vision service if debug mode is enabled
+                if get_debug_mode():
+                    from datetime import datetime
+                    import os
+                    os.makedirs('./saved_images', exist_ok=True)
+                    debug_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    with open(f'./saved_images/debug_sent_{debug_timestamp}.jpg', 'wb') as f:
+                        f.write(image_bytes)
                 
                 # Analyze the receipt
                 receipt = self.vision_service.analyze_receipt(image_bytes)

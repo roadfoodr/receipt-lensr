@@ -7,7 +7,8 @@ DEFAULT_CONFIG_PATH = "config.json"
 DEFAULT_CONFIG = {
     "openai_api_key": "",
     "anthropic_api_key": "",
-    "use_anthropic": False
+    "use_anthropic": False,
+    "debug_mode": False
 }
 
 def load_config(config_path: str = DEFAULT_CONFIG_PATH) -> dict:
@@ -37,3 +38,8 @@ def get_api_key(use_anthropic: bool = False) -> Optional[str]:
     """Get the appropriate API key based on service selection"""
     config = load_config()
     return config.get('anthropic_api_key' if use_anthropic else 'openai_api_key')
+
+def get_debug_mode() -> bool:
+    """Get the debug mode setting"""
+    config = load_config()
+    return config.get('debug_mode', False)

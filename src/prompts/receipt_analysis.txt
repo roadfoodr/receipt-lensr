@@ -8,9 +8,10 @@ Fields to identify:
 - total_amount: often in printed text
 - bill_date: usually in printed text
 - paid_date: look in the upper right corner for handwritten blue text like "PD 12/31/23";
-             if not found use bill_date
+             if not found use bill_date.  The prefix "PD" is not part of the date and should be omitted.
 - payment_method: look in the upper right corner for handwritten blue text like one of the following:
-                  "CK 1234" or "CK # 2624" or "Ck #2701", 
+                  "CK 1234" or "CK # 2624" or "Ck #2701" 
+                  (the prefix "CK" and/or "#" is not part of the payment method and should be omitted), 
                   or "AMEX" (if the word AMEX or "PD AMEX" is present),
                   or "VISA" (if the word VISA or "PD VISA" is present),
                   or "PayPal" (if the word PayPal or "PD PayPal" is present)
