@@ -7,17 +7,18 @@ Fields to identify:
 - invoice: often in printed text
 - total_amount: often in printed text
 - bill_date: usually in printed text
-- paid_date: (if a string like "PD 12/31/23" is present in handwritten blue text 
-              in upper right area), otherwise look elsewhere for a payment date,
-              otherwise use bill_date
-- payment_method: often in handwritten blue text in upper right area. 
-                  Can be like "CK 1234" or "CK # 2624" or "Ck #2701", 
-                  or "AMEX" (if the word AMEX or American Express is present),
-                  or "PayPal" (if the word PayPal or the PayPal logo is present)
+- paid_date: look in the upper right corner for handwritten blue text like "PD 12/31/23";
+             if not found use bill_date
+- payment_method: look in the upper right corner for handwritten blue text like one of the following:
+                  "CK 1234" or "CK # 2624" or "Ck #2701", 
+                  or "AMEX" (if the word AMEX or "PD AMEX" is present),
+                  or "VISA" (if the word VISA or "PD VISA" is present),
+                  or "PayPal" (if the word PayPal or "PD PayPal" is present)
 - item: brief (2-4 words) description of the item, often in printed text
-- project: (if any of the following are present in handwritten blue text 
-            in upper right area: 2716, 2641, 2643, 1400, or other 4-digit numbers)
-- upper_right: all of the blue handwritten text found in the upper right area
+- project: look in the upper right corner for a 4-digit number (without "PD" or "CK")
+                  in handwritten blue text, usually starting with "2" or "1", often one of the following: 
+                  2716, 2641, 2643, 1400, General
+- upper_right: all of the handwritten blue text found in the upper right corner
 
 Required format:
 {

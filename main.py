@@ -45,13 +45,20 @@ class ReceiptProcessor(ctk.CTk):
         self.control_panel = ctk.CTkFrame(self.camera_frame)
         self.control_panel.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
         
-        # Create capture button in control panel
+        # Create buttons in control panel
         self.capture_button = ctk.CTkButton(
             self.control_panel,
             text="Capture (Spacebar)",
             command=self.capture_image
         )
-        self.capture_button.pack(pady=5)
+        self.capture_button.pack(side="left", padx=5, pady=5)
+        
+        self.save_button = ctk.CTkButton(
+            self.control_panel,
+            text="Save (Return)",
+            command=self.save_image
+        )
+        self.save_button.pack(side="left", padx=5, pady=5)
         
         # Add status label in control panel
         self.status_label = ctk.CTkLabel(self.control_panel, text="")
@@ -64,8 +71,9 @@ class ReceiptProcessor(ctk.CTk):
         )
         self.right_label.grid(row=0, column=0, padx=20, pady=20)
         
-        # Bind spacebar to capture
+        # Bind spacebar to capture and return to save
         self.bind('<space>', lambda event: self.capture_image())
+        self.bind('<Return>', lambda event: self.save_image())
 
         # Initialize the Vision API Service without explicit api_key
         # It will load from config automatically
@@ -123,9 +131,12 @@ class ReceiptProcessor(ctk.CTk):
         try:
             if not self.frame_queue.empty():
                 frame = self.frame_queue.get()
-                                
+                
                 # Convert to PIL Image
                 image = Image.fromarray(frame)
+                
+                # Rotate image 90 degrees counterclockwise
+                image = image.rotate(90, expand=True)
                 
                 # Get the actual dimensions of the camera label
                 preview_width = self.camera_label.winfo_width()
@@ -136,11 +147,9 @@ class ReceiptProcessor(ctk.CTk):
                 preview_ratio = preview_width / preview_height
                 
                 if img_ratio > preview_ratio:
-                    # Image is wider relative to its height than preview area
                     new_height = preview_height
                     new_width = int(preview_height * img_ratio)
                 else:
-                    # Image is taller relative to its width than preview area
                     new_width = preview_width
                     new_height = int(preview_width / img_ratio)
                 
@@ -152,8 +161,10 @@ class ReceiptProcessor(ctk.CTk):
                 y_offset = (new_height - preview_height) // 2
                 image = image.crop((x_offset, y_offset, x_offset + preview_width, y_offset + preview_height))
                 
-                # Create photo image and update label
-                photo = ImageTk.PhotoImage(image)
+                # Create CTkImage instead of PhotoImage
+                photo = ctk.CTkImage(light_image=image, 
+                                   dark_image=image,
+                                   size=(preview_width, preview_height))
                 self.camera_label.configure(image=photo)
                 self.camera_label.image = photo
             
@@ -170,6 +181,9 @@ class ReceiptProcessor(ctk.CTk):
             if not self.frame_queue.empty():
                 frame = self.frame_queue.get()
                 self.frame_queue.put(frame)  # Put it back if needed elsewhere
+                
+                # Rotate frame 90 degrees counterclockwise
+                frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
                 
                 # Convert frame to bytes
                 _, buffer = cv2.imencode('.jpg', frame)
@@ -189,6 +203,38 @@ class ReceiptProcessor(ctk.CTk):
         except Exception as e:
             print(f"Error capturing image: {e}")
             self.status_label.configure(text=f"Error capturing image: {e}")
+            self.after(2000, lambda: self.status_label.configure(text=""))
+    
+    def save_image(self):
+        """Save the current frame to the saved_images folder"""
+        try:
+            import os
+            from datetime import datetime
+            
+            # Create saved_images directory if it doesn't exist
+            os.makedirs('./saved_images', exist_ok=True)
+            
+            if not self.frame_queue.empty():
+                frame = self.frame_queue.get()
+                self.frame_queue.put(frame)  # Put it back
+                
+                # Rotate frame 90 degrees counterclockwise
+                frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                
+                # Generate filename with timestamp
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f'./saved_images/receipt_{timestamp}.jpg'
+                
+                # Save the image
+                cv2.imwrite(filename, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+                
+                self.status_label.configure(text=f"Image saved: {filename}")
+                self.after(2000, lambda: self.status_label.configure(text=""))
+            else:
+                self.status_label.configure(text="Error: No frame available")
+        except Exception as e:
+            print(f"Error saving image: {e}")
+            self.status_label.configure(text=f"Error saving image: {e}")
             self.after(2000, lambda: self.status_label.configure(text=""))
     
     def on_closing(self):
