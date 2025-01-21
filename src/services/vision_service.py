@@ -28,27 +28,21 @@ class Receipt:
 
 class VisionAPIService:
     def __init__(self, api_key: str = None, use_anthropic: bool = False):
-        """Initialize the Vision API service
-        
-        Args:
-            api_key: API key for either OpenAI or Anthropic. If None, will load from config
-            use_anthropic: If True, use Claude Vision API, otherwise use OpenAI
-            
-        Raises:
-            ValueError: If no API key is available or configuration is invalid
-        """
+        """Initialize the Vision API service"""
         from src.utils.config import get_api_key
         
-        # If no API key provided, try to load from config
         self.api_key = api_key or get_api_key(use_anthropic)
         if not self.api_key:
             raise ValueError("No API key available. Please check your config.json")
             
         self.use_anthropic = use_anthropic
-        # print(f"api_key: {self.api_key}")
-        
-        if use_anthropic:
+        self._setup_api_config()
+
+    def _setup_api_config(self):
+        """Set up API configuration based on service type"""
+        if self.use_anthropic:
             self.api_url = "https://api.anthropic.com/v1/messages"
+            self.model = "claude-3-haiku-20240307"
             self.headers = {
                 "x-api-key": self.api_key,
                 "anthropic-version": "2023-06-01",
@@ -56,10 +50,66 @@ class VisionAPIService:
             }
         else:
             self.api_url = "https://api.openai.com/v1/chat/completions"
+            self.model = "gpt-4o-mini"
             self.headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
+
+    def _create_payload(self, prompt: str, image_base64: str) -> dict:
+        """Create API payload based on service type"""
+        if self.use_anthropic:
+            return {
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": image_base64
+                            }
+                        }
+                    ]
+                }],
+                "model": self.model,
+                "max_tokens": 1024
+            }
+        else:
+            return {
+                "model": self.model,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{image_base64}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "max_tokens": 1024
+            }
+
+    def _make_request(self, payload: dict) -> str:
+        """Make API request and extract response text"""
+        response = requests.post(
+            self.api_url,
+            headers=self.headers,
+            json=payload
+        )
+        response.raise_for_status()
+        
+        if self.use_anthropic:
+            return response.json()['content'][0]['text']
+        else:
+            return response.json()['choices'][0]['message']['content']
 
     def _encode_image(self, image_bytes: bytes) -> str:
         """Convert image bytes to base64 string"""
@@ -77,88 +127,25 @@ class VisionAPIService:
         return prompt
 
     def analyze_receipt(self, image_bytes: bytes, previous_corrections: Optional[dict] = None) -> Receipt:
-        """Analyze a receipt image using the Vision API
-        
-        Args:
-            image_bytes: Raw bytes of the receipt image
-            previous_corrections: Optional dictionary of previous corrections for learning
-            
-        Returns:
-            Receipt object with extracted information
-            
-        Raises:
-            Exception: If API call fails or response parsing fails
-        """
-        base64_image = self._encode_image(image_bytes)
-        prompt = self._build_prompt(previous_corrections)
-        
-        if self.use_anthropic:
-            payload = {
-                "messages": [{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/jpeg",
-                                "data": base64_image
-                            }
-                        }
-                    ]
-                }],
-                "model": "claude-3-haiku-20240307",
-                "max_tokens": 1024
-            }
-        else:
-            payload = {
-                "model": "gpt-4o-mini",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_image}"
-                                }
-                            }
-                        ]
-                    }
-                ],
-                "max_tokens": 1024
-            }
-            
+        """Analyze a receipt image using the Vision API"""
         try:
-            response = requests.post(
-                self.api_url,
-                headers=self.headers,
-                json=payload
-            )
-            response.raise_for_status()
+            # Get the prompt for receipt analysis
+            prompt = self._build_prompt(previous_corrections)
             
-            # Parse response
-            if self.use_anthropic:
-                result = response.json()['content'][0]['text']
-            else:
-                result = response.json()['choices'][0]['message']['content']
+            # Use analyze_image_raw to get the response
+            result = self.analyze_image_raw(image_bytes, prompt)
             
-            print(f"result: {result}")
-
-            # Clean up markdown code blocks if present 
+            # Clean up markdown code blocks if present
             if result.startswith('```'):
-                result = result.split('```')[1] # Get content between markers
-                if result.startswith('json'): # Remove json language identifier
+                result = result.split('```')[1]
+                if result.startswith('json'):
                     result = result[4:]
-                    result = result.strip() # Remove any extra whitespace
-
+                result = result.strip()
+            
             # Parse the JSON response into our dataclass
             data = json.loads(result)
             
-            # Create Receipt object with all fields as strings
-            receipt = Receipt(
+            return Receipt(
                 vendor=data.get('vendor', 'not found'),
                 invoice=data.get('invoice', 'not found'),
                 bill_date=data.get('bill_date', 'not found'),
@@ -170,12 +157,8 @@ class VisionAPIService:
                 upper_right=data.get('upper_right', 'not found')
             )
             
-            return receipt
-            
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             raise Exception(f"API request failed: {str(e)}")
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
-            raise Exception(f"Failed to parse API response: {str(e)}")
 
     def handle_correction(self, original: Receipt, corrected: Receipt) -> dict:
         """Process corrections to improve future extractions
@@ -200,3 +183,13 @@ class VisionAPIService:
             corrections['category'] = f"Purchases from {corrected.vendor} should be categorized as {corrected.category}"
             
         return corrections
+
+    def analyze_image_raw(self, image_bytes: bytes, prompt: str) -> str:
+        """Analyze an image with a custom prompt and return raw response"""
+        try:
+            base64_image = self._encode_image(image_bytes)
+            payload = self._create_payload(prompt, base64_image)
+            return self._make_request(payload)
+                
+        except Exception as e:
+            raise Exception(f"API request failed: {str(e)}")

@@ -1,0 +1,27 @@
+Please analyze this image and list all visible text elements, organized by their location and type. Format your response in markdown with these sections:
+
+1. Printed Text
+   - Headers/Titles
+   - Body text
+   - Numbers/Amounts
+   - Any other printed elements
+
+2. Handwritten Text
+   - Upper right corner text (in blue)
+   - Any other handwritten elements
+
+3. Pen Text
+   - Any text written with a pen
+
+4. Blue Text
+   - Any text written in a blue or dark blue color
+
+5. Corner Text
+   - Any text found in the upper right corner of the image
+
+6. Layout Description
+   - briefly Describe how the text is arranged on the page
+   - brieflyNote any distinct sections or columns
+   - brieflyMention any logos, stamps, or other visual elements
+
+Please be thorough and specific about the actual text content you see, preserving exact numbers, dates, and text as they appear. 
