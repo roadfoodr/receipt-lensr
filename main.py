@@ -57,13 +57,6 @@ class ReceiptProcessor(ctk.CTk):
         self.control_panel.grid(row=1, column=0, padx=10, pady=(0, 5), sticky="ew")
         
         # Create buttons in control panel
-        self.capture_button = ctk.CTkButton(
-            self.control_panel,
-            text="Capture (Spacebar)",
-            command=self.capture_image
-        )
-        self.capture_button.pack(side="left", padx=5, pady=5)
-        
         self.rotate_button = ctk.CTkButton(
             self.control_panel,
             text="Rotate (R)",
@@ -77,6 +70,13 @@ class ReceiptProcessor(ctk.CTk):
             command=self.save_image
         )
         self.save_button.pack(side="left", padx=5, pady=5)
+        
+        self.capture_button = ctk.CTkButton(
+            self.control_panel,
+            text="Capture (Spacebar)",
+            command=self.capture_image
+        )
+        self.capture_button.pack(side="left", padx=5, pady=5)
         
         # Add status label below control panel
         self.status_label = ctk.CTkLabel(self.camera_frame, text="")
@@ -106,7 +106,7 @@ class ReceiptProcessor(ctk.CTk):
         self.commit_button = ctk.CTkButton(
             self.right_scroll,
             text="Commit to CSV",
-            command=self.commit_to_csv,
+            command=self.commit_to_datastore,
             state="disabled"
         )
         self.commit_button.grid(row=len(self.fields_to_display), column=0, 
@@ -222,6 +222,20 @@ class ReceiptProcessor(ctk.CTk):
     def capture_image(self):
         """Capture the current frame and analyze it using the Vision API"""
         try:
+            # Show immediate feedback that capture was triggered
+            self.status_label.configure(text="Capturing and analyzing image...")
+            # Force update the display immediately
+            self.status_label.update()
+            
+            # Clear all field values
+            for value_label in self.field_values.values():
+                value_label.configure(text="")
+                value_label.update()  # Force immediate update of each field
+            
+            # Disable commit button while processing
+            self.commit_button.configure(state="disabled")
+            self.commit_button.update()  # Force immediate update of button
+            
             if not self.frame_queue.empty():
                 frame = self.frame_queue.get()
                 self.frame_queue.put(frame)  # Put it back if needed elsewhere
@@ -245,9 +259,9 @@ class ReceiptProcessor(ctk.CTk):
                 if get_debug_mode():
                     from datetime import datetime
                     import os
-                    os.makedirs('./saved_images', exist_ok=True)
+                    os.makedirs('./output/saved_images', exist_ok=True)
                     debug_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    with open(f'./saved_images/debug_sent_{debug_timestamp}.jpg', 'wb') as f:
+                    with open(f'./output/saved_images/debug_sent_{debug_timestamp}.jpg', 'wb') as f:
                         f.write(image_bytes)
                 
                 # Analyze the receipt
@@ -271,13 +285,13 @@ class ReceiptProcessor(ctk.CTk):
             self.after(2000, lambda: self.status_label.configure(text=""))
     
     def save_image(self):
-        """Save the current frame to the saved_images folder"""
+        """Save the current frame to the output/saved_images folder"""
         try:
             import os
             from datetime import datetime
             
-            # Create saved_images directory if it doesn't exist
-            os.makedirs('./saved_images', exist_ok=True)
+            # Create output/saved_images directory if it doesn't exist
+            os.makedirs('./output/saved_images', exist_ok=True)
             
             if not self.frame_queue.empty():
                 frame = self.frame_queue.get()
@@ -293,7 +307,7 @@ class ReceiptProcessor(ctk.CTk):
                 
                 # Generate filename with timestamp
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f'./saved_images/receipt_{timestamp}.jpg'
+                filename = f'./output/saved_images/receipt_{timestamp}.jpg'
                 
                 # Save the image
                 cv2.imwrite(filename, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
@@ -325,15 +339,21 @@ class ReceiptProcessor(ctk.CTk):
         if self.current_receipt:
             for field in self.fields_to_display:
                 value = getattr(self.current_receipt, field)
-                self.field_values[field].configure(text=str(value))
+                # Reset text color to default and update value
+                self.field_values[field].configure(
+                    text=str(value),
+                    text_color=("black", "white")  # (light mode, dark mode)
+                )
             self.commit_button.configure(state="normal")
 
-    def commit_to_csv(self):
+    def commit_to_datastore(self):
         """Save the current receipt data to CSV file"""
         import csv
         import os
         
-        csv_file = './receipts.csv'
+        # Create output directory if it doesn't exist
+        os.makedirs('./output', exist_ok=True)
+        csv_file = './output/receipts.csv'
         file_exists = os.path.isfile(csv_file)
         
         try:
@@ -348,6 +368,10 @@ class ReceiptProcessor(ctk.CTk):
                 receipt_dict = {field: getattr(self.current_receipt, field) 
                               for field in self.fields_to_display}
                 writer.writerow(receipt_dict)
+                
+                # Grey out the field values
+                for value_label in self.field_values.values():
+                    value_label.configure(text_color="grey")
                 
                 # Disable commit button and show success message
                 self.commit_button.configure(state="disabled")

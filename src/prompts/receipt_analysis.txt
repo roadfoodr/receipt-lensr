@@ -6,7 +6,7 @@ Fields to identify:
 - vendor: often in printed text
 - invoice: often in printed text
 - total_amount: often in printed text
-- bill_date: usually in printed text
+- bill_date: usually in printed text.  Date format should be output as "MM/DD/YYYY"
 - paid_date: look in the upper right corner for handwritten blue text like "PD 12/31/23";
              if not found use bill_date.  The prefix "PD" is not part of the date and should be omitted.
 - payment_method: look in the upper right corner for handwritten blue text like one of the following:
@@ -24,25 +24,25 @@ Fields to identify:
 Required format:
 {
     "vendor": "Store Name",
-    "invoice": "123456",
     "bill_date": "03/14/2024",
     "paid_date": "04/17/2024",
-    "payment_method": "Ck 1234",
     "total_amount": 123.45,
     "item": "Item",
+    "invoice": "123456",
     "project": "2716",
-    "upper_right": "text found in upper right area"
+    "payment_method": "Ck 1234",
+    "upper_right": "all blue text found in upper right area"
 }
 
 Example with missing fields:
 {
     "vendor": "Walmart",
-    "invoice": "123456",
-    "total_amount": 123.45,
-    "item": "not found",
-    "project": "not found",
-    "payment_method": "Ck 1234",
     "bill_date": "03/14/2024",
     "paid_date": "04/17/2024",
+    "total_amount": 123.45,
+    "item": "not found",
+    "invoice": "123456",
+    "project": "not found",
+    "payment_method": "Ck 1234",
     "upper_right": "not found"
 } 
