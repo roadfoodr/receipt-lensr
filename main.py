@@ -10,6 +10,9 @@ class ReceiptProcessor(ctk.CTk):
     def __init__(self):
         super().__init__()
         
+        # Add rotation state
+        self.rotation_angle = 90  # Start with 90 degree rotation (counterclockwise)
+        
         # Configure main window
         self.title("Receipt Processor")
         self.geometry("1600x900")  # Landscape window
@@ -38,13 +41,13 @@ class ReceiptProcessor(ctk.CTk):
             self.camera_frame,
             text="",
             width=500,  # Fixed width
-            height=800  # Fixed height for portrait orientation
+            height=700  # Reduced height for portrait orientation
         )
         self.camera_label.grid(row=0, column=0, padx=10, pady=10, sticky="n")  # Stick to top
         
         # Create control panel frame at bottom of camera frame
         self.control_panel = ctk.CTkFrame(self.camera_frame)
-        self.control_panel.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        self.control_panel.grid(row=1, column=0, padx=10, pady=(0, 5), sticky="ew")
         
         # Create buttons in control panel
         self.capture_button = ctk.CTkButton(
@@ -54,6 +57,13 @@ class ReceiptProcessor(ctk.CTk):
         )
         self.capture_button.pack(side="left", padx=5, pady=5)
         
+        self.rotate_button = ctk.CTkButton(
+            self.control_panel,
+            text="Rotate (R)",
+            command=self.rotate_view
+        )
+        self.rotate_button.pack(side="left", padx=5, pady=5)
+        
         self.save_button = ctk.CTkButton(
             self.control_panel,
             text="Save (Return)",
@@ -61,9 +71,9 @@ class ReceiptProcessor(ctk.CTk):
         )
         self.save_button.pack(side="left", padx=5, pady=5)
         
-        # Add status label in control panel
-        self.status_label = ctk.CTkLabel(self.control_panel, text="")
-        self.status_label.pack(pady=5)
+        # Add status label below control panel
+        self.status_label = ctk.CTkLabel(self.camera_frame, text="")
+        self.status_label.grid(row=2, column=0, pady=(0, 10), sticky="ew")
         
         # Add placeholder text in right panel
         self.right_label = ctk.CTkLabel(
@@ -75,6 +85,9 @@ class ReceiptProcessor(ctk.CTk):
         # Bind spacebar to capture and return to save
         self.bind('<space>', lambda event: self.capture_image())
         self.bind('<Return>', lambda event: self.save_image())
+        
+        # Add 'R' key binding for rotation
+        self.bind('r', lambda event: self.rotate_view())
 
         # Initialize the Vision API Service without explicit api_key
         # It will load from config automatically
@@ -136,8 +149,8 @@ class ReceiptProcessor(ctk.CTk):
                 # Convert to PIL Image
                 image = Image.fromarray(frame)
                 
-                # Rotate image 90 degrees counterclockwise
-                image = image.rotate(90, expand=True)
+                # Rotate image according to current rotation angle
+                image = image.rotate(self.rotation_angle, expand=True)
                 
                 # Get the actual dimensions of the camera label
                 preview_width = self.camera_label.winfo_width()
@@ -157,9 +170,9 @@ class ReceiptProcessor(ctk.CTk):
                 # Resize image
                 image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
                 
-                # Center the image
+                # Center horizontally but align to top vertically
                 x_offset = (new_width - preview_width) // 2
-                y_offset = (new_height - preview_height) // 2
+                y_offset = 0  # Changed from centered to top-aligned
                 image = image.crop((x_offset, y_offset, x_offset + preview_width, y_offset + preview_height))
                 
                 # Create CTkImage instead of PhotoImage
@@ -183,8 +196,13 @@ class ReceiptProcessor(ctk.CTk):
                 frame = self.frame_queue.get()
                 self.frame_queue.put(frame)  # Put it back if needed elsewhere
                 
-                # Rotate frame 90 degrees counterclockwise
-                frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                # Rotate frame according to current rotation angle
+                if self.rotation_angle == 90:
+                    frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                elif self.rotation_angle == 180:
+                    frame = cv2.rotate(frame, cv2.ROTATE_180)
+                elif self.rotation_angle == 270:
+                    frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
                 
                 # Convert to BGR for consistent color handling
                 frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -231,8 +249,13 @@ class ReceiptProcessor(ctk.CTk):
                 frame = self.frame_queue.get()
                 self.frame_queue.put(frame)  # Put it back
                 
-                # Rotate frame 90 degrees counterclockwise
-                frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                # Rotate frame according to current rotation angle
+                if self.rotation_angle == 90:
+                    frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                elif self.rotation_angle == 180:
+                    frame = cv2.rotate(frame, cv2.ROTATE_180)
+                elif self.rotation_angle == 270:
+                    frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
                 
                 # Generate filename with timestamp
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -249,6 +272,12 @@ class ReceiptProcessor(ctk.CTk):
             print(f"Error saving image: {e}")
             self.status_label.configure(text=f"Error saving image: {e}")
             self.after(2000, lambda: self.status_label.configure(text=""))
+    
+    def rotate_view(self):
+        """Rotate the preview by 90 degrees clockwise"""
+        self.rotation_angle = (self.rotation_angle + 90) % 360
+        self.status_label.configure(text=f"Rotation: {self.rotation_angle}°")
+        self.after(2000, lambda: self.status_label.configure(text=""))
     
     def on_closing(self):
         """Clean up resources on window close"""
