@@ -13,6 +13,13 @@ class ReceiptProcessor(ctk.CTk):
         # Add rotation state
         self.rotation_angle = 90  # Start with 90 degree rotation (counterclockwise)
         
+        # Add receipt data storage
+        self.current_receipt = None
+        self.fields_to_display = [
+            'vendor', 'invoice', 'bill_date', 'paid_date', 
+            'payment_method', 'total_amount', 'item', 'project'
+        ]
+        
         # Configure main window
         self.title("Receipt Processor")
         self.geometry("1600x900")  # Landscape window
@@ -75,12 +82,35 @@ class ReceiptProcessor(ctk.CTk):
         self.status_label = ctk.CTkLabel(self.camera_frame, text="")
         self.status_label.grid(row=2, column=0, pady=(0, 10), sticky="ew")
         
-        # Add placeholder text in right panel
-        self.right_label = ctk.CTkLabel(
-            self.right_frame,
-            text="Data and controls will appear here"
+        # Replace placeholder right panel content with scrollable frame
+        self.right_scroll = ctk.CTkScrollableFrame(self.right_frame)
+        self.right_scroll.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        self.right_frame.grid_rowconfigure(0, weight=1)
+        
+        # Create dictionary to store label widgets
+        self.field_labels = {}
+        self.field_values = {}
+        
+        # Create labels for each field
+        for idx, field in enumerate(self.fields_to_display):
+            label = ctk.CTkLabel(self.right_scroll, text=f"{field.replace('_', ' ').title()}:")
+            label.grid(row=idx, column=0, padx=5, pady=5, sticky="e")
+            
+            value_label = ctk.CTkLabel(self.right_scroll, text="", width=200)
+            value_label.grid(row=idx, column=1, padx=5, pady=5, sticky="w")
+            
+            self.field_labels[field] = label
+            self.field_values[field] = value_label
+        
+        # Add commit button
+        self.commit_button = ctk.CTkButton(
+            self.right_scroll,
+            text="Commit to CSV",
+            command=self.commit_to_csv,
+            state="disabled"
         )
-        self.right_label.grid(row=0, column=0, padx=20, pady=20)
+        self.commit_button.grid(row=len(self.fields_to_display), column=0, 
+                              columnspan=2, pady=20)
         
         # Bind spacebar to capture and return to save
         self.bind('<space>', lambda event: self.capture_image())
@@ -227,6 +257,10 @@ class ReceiptProcessor(ctk.CTk):
                 self.status_label.configure(text=f"Vendor: {receipt.vendor}, Total: {receipt.total_amount}")
                 print("Receipt analyzed:", receipt)
                 
+                # Store the receipt and update UI
+                self.current_receipt = receipt
+                self.update_receipt_display()
+                
                 # Clear the message after 2 seconds
                 self.after(2000, lambda: self.status_label.configure(text=""))
             else:
@@ -285,6 +319,45 @@ class ReceiptProcessor(ctk.CTk):
         if self.camera is not None:
             self.camera.release()
         self.quit()
+
+    def update_receipt_display(self):
+        """Update the right panel with receipt data"""
+        if self.current_receipt:
+            for field in self.fields_to_display:
+                value = getattr(self.current_receipt, field)
+                self.field_values[field].configure(text=str(value))
+            self.commit_button.configure(state="normal")
+
+    def commit_to_csv(self):
+        """Save the current receipt data to CSV file"""
+        import csv
+        import os
+        
+        csv_file = './receipts.csv'
+        file_exists = os.path.isfile(csv_file)
+        
+        try:
+            with open(csv_file, mode='a', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=self.fields_to_display)
+                
+                # Write header if file is new
+                if not file_exists:
+                    writer.writeheader()
+                
+                # Write receipt data
+                receipt_dict = {field: getattr(self.current_receipt, field) 
+                              for field in self.fields_to_display}
+                writer.writerow(receipt_dict)
+                
+                # Disable commit button and show success message
+                self.commit_button.configure(state="disabled")
+                self.status_label.configure(text="Receipt committed to CSV")
+                self.after(2000, lambda: self.status_label.configure(text=""))
+                
+        except Exception as e:
+            print(f"Error saving to CSV: {e}")
+            self.status_label.configure(text=f"Error saving to CSV: {e}")
+            self.after(2000, lambda: self.status_label.configure(text=""))
 
 if __name__ == "__main__":
     app = ReceiptProcessor()
