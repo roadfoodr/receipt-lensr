@@ -5,6 +5,7 @@ import threading
 import queue
 from src.services.vision_service import VisionAPIService, Receipt
 from src.utils.config import get_debug_mode
+import tkinter
 
 class ReceiptProcessor(ctk.CTk):
     def __init__(self):
@@ -87,9 +88,10 @@ class ReceiptProcessor(ctk.CTk):
         self.right_scroll.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
         self.right_frame.grid_rowconfigure(0, weight=1)
         
-        # Create dictionary to store label widgets
+        # Create dictionary to store label widgets and entry fields
         self.field_labels = {}
         self.field_values = {}
+        self.field_overrides = {}  # New dictionary for override entries
         
         # Create labels for each field
         for idx, field in enumerate(self.fields_to_display):
@@ -99,8 +101,13 @@ class ReceiptProcessor(ctk.CTk):
             value_label = ctk.CTkLabel(self.right_scroll, text="", width=200)
             value_label.grid(row=idx, column=1, padx=5, pady=5, sticky="w")
             
+            # Add override entry field
+            override_entry = ctk.CTkEntry(self.right_scroll, width=200)
+            override_entry.grid(row=idx, column=2, padx=5, pady=5, sticky="w")
+            
             self.field_labels[field] = label
             self.field_values[field] = value_label
+            self.field_overrides[field] = override_entry
         
         # Add commit button
         self.commit_button = ctk.CTkButton(
@@ -112,13 +119,11 @@ class ReceiptProcessor(ctk.CTk):
         self.commit_button.grid(row=len(self.fields_to_display), column=0, 
                               columnspan=2, pady=20)
         
-        # Bind spacebar to capture and return to save
-        self.bind('<space>', lambda event: self.capture_image())
-        self.bind('<Return>', lambda event: self.save_image())
+        # Bind keyboard shortcuts to main window
+        self.bind('<space>', self.handle_space)
+        self.bind('<Return>', self.handle_return)
+        self.bind('r', self.handle_r)
         
-        # Add 'R' key binding for rotation
-        self.bind('r', lambda event: self.rotate_view())
-
         # Initialize the Vision API Service without explicit api_key
         # It will load from config automatically
         self.vision_service = VisionAPIService(use_anthropic=False)
@@ -364,14 +369,21 @@ class ReceiptProcessor(ctk.CTk):
                 if not file_exists:
                     writer.writeheader()
                 
-                # Write receipt data
-                receipt_dict = {field: getattr(self.current_receipt, field) 
-                              for field in self.fields_to_display}
+                # Write receipt data, using overrides where present
+                receipt_dict = {}
+                for field in self.fields_to_display:
+                    override_value = self.field_overrides[field].get().strip()
+                    if override_value:  # Use override if present
+                        receipt_dict[field] = override_value
+                    else:  # Otherwise use extracted value
+                        receipt_dict[field] = getattr(self.current_receipt, field)
+                
                 writer.writerow(receipt_dict)
                 
-                # Grey out the field values
-                for value_label in self.field_values.values():
-                    value_label.configure(text_color="grey")
+                # Grey out the field values and clear overrides
+                for field in self.fields_to_display:
+                    self.field_values[field].configure(text_color="grey")
+                    self.field_overrides[field].delete(0, 'end')  # Clear override entries
                 
                 # Disable commit button and show success message
                 self.commit_button.configure(state="disabled")
@@ -382,6 +394,33 @@ class ReceiptProcessor(ctk.CTk):
             print(f"Error saving to CSV: {e}")
             self.status_label.configure(text=f"Error saving to CSV: {e}")
             self.after(2000, lambda: self.status_label.configure(text=""))
+
+    def is_override_focused(self):
+        """Check if any override entry has focus"""
+        focused = self.focus_get()
+        print(f"Focused widget: {focused}, type: {type(focused)}")  # Debug print
+        return isinstance(focused, (ctk.CTkEntry, tkinter.Entry))  # Check for both types
+
+    def handle_space(self, event):
+        """Handle spacebar press only if not in override fields"""
+        focused = self.is_override_focused()
+        print(f"Space pressed, override focused: {focused}")  # Debug print
+        if not focused:
+            self.capture_image()
+
+    def handle_return(self, event):
+        """Handle return press only if not in override fields"""
+        focused = self.is_override_focused()
+        print(f"Return pressed, override focused: {focused}")  # Debug print
+        if not focused:
+            self.save_image()
+
+    def handle_r(self, event):
+        """Handle R press only if not in override fields"""
+        focused = self.is_override_focused()
+        print(f"R pressed, override focused: {focused}")  # Debug print
+        if not focused:
+            self.rotate_view()
 
 if __name__ == "__main__":
     app = ReceiptProcessor()
