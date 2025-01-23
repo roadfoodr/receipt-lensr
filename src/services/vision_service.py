@@ -160,7 +160,7 @@ class VisionAPIService:
         except Exception as e:
             raise Exception(f"API request failed: {str(e)}")
 
-    def handle_correction(self, original: Receipt, corrected: Receipt) -> dict:
+    def handle_correction(self, original: Receipt, corrected: Receipt) -> str:
         """Process corrections to improve future extractions
         
         Args:
@@ -168,21 +168,15 @@ class VisionAPIService:
             corrected: Corrected Receipt object from user
             
         Returns:
-            Dictionary of learning points for future prompts
+            String describing the correction for future prompts
         """
-        corrections = {}
-        
-        # Compare fields and identify corrections
-        if original.vendor != corrected.vendor:
-            corrections['vendor'] = f"When the receipt shows '{original.vendor}', it should be interpreted as '{corrected.vendor}'"
+        corrections = [
+            f"When the receipt shows vendor '{original.vendor}', interpret as '{corrected.vendor}'",
+            f"When total amount shows '{original.total_amount}', interpret as '{corrected.total_amount}'",
+            f"When category shows '{original.category}', interpret as '{corrected.category}'"
+        ]
             
-        if original.total_amount != corrected.total_amount:
-            corrections['total_amount'] = f"Pay special attention to decimal places and currency symbols"
-            
-        if original.category != corrected.category:
-            corrections['category'] = f"Purchases from {corrected.vendor} should be categorized as {corrected.category}"
-            
-        return corrections
+        return " | ".join(corrections)
 
     def analyze_image_raw(self, image_bytes: bytes, prompt: str) -> str:
         """Analyze an image with a custom prompt and return raw response"""

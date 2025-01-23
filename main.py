@@ -109,14 +109,30 @@ class ReceiptProcessor(ctk.CTk):
             self.field_values[field] = value_label
             self.field_overrides[field] = override_entry
         
-        # Add commit button
+        # Add correction label and entry field
+        correction_label = ctk.CTkLabel(self.right_scroll, text="Correction:")
+        correction_label.grid(row=len(self.fields_to_display), column=0, padx=5, pady=5, sticky="e")
+        
+        self.correction_entry = ctk.CTkEntry(self.right_scroll, width=400)  # Match width to end of column 2
+        self.correction_entry.grid(row=len(self.fields_to_display), column=1, columnspan=2, padx=5, pady=5, sticky="ew")
+        
+        # Add correction button (moved to column 3)
+        self.add_correction_button = ctk.CTkButton(
+            self.right_scroll,
+            text="Add",
+            command=None,  # No action yet
+            state="disabled"
+        )
+        self.add_correction_button.grid(row=len(self.fields_to_display), column=3, padx=5, pady=5)
+        
+        # Add commit button (moved down one row)
         self.commit_button = ctk.CTkButton(
             self.right_scroll,
             text="Commit to CSV",
             command=self.commit_to_datastore,
             state="disabled"
         )
-        self.commit_button.grid(row=len(self.fields_to_display), column=0, 
+        self.commit_button.grid(row=len(self.fields_to_display) + 1, column=0, 
                               columnspan=2, pady=20)
         
         # Bind keyboard shortcuts to main window
@@ -232,10 +248,14 @@ class ReceiptProcessor(ctk.CTk):
             # Force update the display immediately
             self.status_label.update()
             
-            # Clear all field values
-            for value_label in self.field_values.values():
-                value_label.configure(text="")
-                value_label.update()  # Force immediate update of each field
+            # Clear all field values and override entries
+            for field in self.fields_to_display:
+                self.field_values[field].configure(text="")
+                self.field_values[field].update()  # Force immediate update of each field
+                self.field_overrides[field].delete(0, 'end')  # Clear override entries
+            
+            # Clear correction entry
+            self.correction_entry.delete(0, 'end')
             
             # Disable commit button while processing
             self.commit_button.configure(state="disabled")
@@ -350,6 +370,7 @@ class ReceiptProcessor(ctk.CTk):
                     text_color=("black", "white")  # (light mode, dark mode)
                 )
             self.commit_button.configure(state="normal")
+            self.add_correction_button.configure(state="normal")  # Enable add button
 
     def commit_to_datastore(self):
         """Save the current receipt data to CSV file"""
@@ -385,8 +406,12 @@ class ReceiptProcessor(ctk.CTk):
                     self.field_values[field].configure(text_color="grey")
                     self.field_overrides[field].delete(0, 'end')  # Clear override entries
                 
-                # Disable commit button and show success message
+                # Clear correction field
+                self.correction_entry.delete(0, 'end')
+                
+                # Disable buttons and show success message
                 self.commit_button.configure(state="disabled")
+                self.add_correction_button.configure(state="disabled")
                 self.status_label.configure(text="Receipt committed to CSV")
                 self.after(2000, lambda: self.status_label.configure(text=""))
                 
@@ -398,27 +423,23 @@ class ReceiptProcessor(ctk.CTk):
     def is_override_focused(self):
         """Check if any override entry has focus"""
         focused = self.focus_get()
-        print(f"Focused widget: {focused}, type: {type(focused)}")  # Debug print
         return isinstance(focused, (ctk.CTkEntry, tkinter.Entry))  # Check for both types
 
     def handle_space(self, event):
         """Handle spacebar press only if not in override fields"""
         focused = self.is_override_focused()
-        print(f"Space pressed, override focused: {focused}")  # Debug print
         if not focused:
             self.capture_image()
 
     def handle_return(self, event):
         """Handle return press only if not in override fields"""
         focused = self.is_override_focused()
-        print(f"Return pressed, override focused: {focused}")  # Debug print
         if not focused:
             self.save_image()
 
     def handle_r(self, event):
         """Handle R press only if not in override fields"""
         focused = self.is_override_focused()
-        print(f"R pressed, override focused: {focused}")  # Debug print
         if not focused:
             self.rotate_view()
 
