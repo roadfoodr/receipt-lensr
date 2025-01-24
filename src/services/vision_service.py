@@ -37,6 +37,11 @@ class VisionAPIService:
             
         self.use_anthropic = use_anthropic
         self._setup_api_config()
+        
+        # Initialize corrections to empty string before loading
+        self.corrections = ""
+        # Then try to load from disk
+        self.corrections = self._load_corrections()
 
     def _setup_api_config(self):
         """Set up API configuration based on service type"""
@@ -115,22 +120,47 @@ class VisionAPIService:
         """Convert image bytes to base64 string"""
         return base64.b64encode(image_bytes).decode('utf-8')
         
-    def _build_prompt(self, previous_corrections: Optional[dict] = None) -> str:
+    def _load_corrections(self) -> str:
+        """Load corrections from corrections.txt as raw text"""
+        corrections_path = os.path.join(os.path.dirname(__file__), '..', 'prompts', 'corrections.txt')
+        corrections = ""
+        
+        try:
+            if os.path.exists(corrections_path):
+                with open(corrections_path, 'r') as f:
+                    corrections = f.read()
+            return corrections
+        except Exception as e:
+            print(f"Warning: Failed to load corrections: {e}")
+            return ""
+
+    def _build_prompt(self, previous_corrections: Optional[str] = None) -> str:
         """Build the prompt for receipt analysis"""
         prompt_path = os.path.join(os.path.dirname(__file__), '..', 'prompts', 'receipt_analysis.txt')
         with open(prompt_path, 'r') as f:
             prompt = f.read()
 
         if previous_corrections:
-            prompt += "\nPrevious corrections to consider: " + json.dumps(previous_corrections)
-                
+            prompt += "\nPrevious corrections:\n" + previous_corrections
+            
         return prompt
 
-    def analyze_receipt(self, image_bytes: bytes, previous_corrections: Optional[dict] = None) -> Receipt:
+    def analyze_receipt(self, image_bytes: bytes, previous_corrections: Optional[str] = None) -> Receipt:
         """Analyze a receipt image using the Vision API"""
         try:
+            # Use stored corrections if none provided
+            if previous_corrections is None:
+                previous_corrections = self.corrections
+            
             # Get the prompt for receipt analysis
             prompt = self._build_prompt(previous_corrections)
+            
+            # Print prompt in debug mode
+            from src.utils.config import get_debug_mode
+            if get_debug_mode():
+                print("\n=== PROMPT ===")
+                print(prompt)
+                print("=============\n")
             
             # Use analyze_image_raw to get the response
             result = self.analyze_image_raw(image_bytes, prompt)
@@ -169,3 +199,7 @@ class VisionAPIService:
                 
         except Exception as e:
             raise Exception(f"API request failed: {str(e)}")
+
+    def add_correction(self, correction: str):
+        """Add a new correction to memory"""
+        self.corrections += "\n" + correction

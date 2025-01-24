@@ -460,16 +460,20 @@ class ReceiptProcessor(ctk.CTk):
             self.rotate_view()
 
     def add_correction(self):
-        """Save the correction to src/prompts/corrections.txt"""
+        """Save the correction to disk and update in-memory corrections"""
         try:
             correction = self.correction_entry.get().strip()
             if correction:
+                # Save to disk
                 import os
                 prompts_dir = os.path.join('src', 'prompts')
                 os.makedirs(prompts_dir, exist_ok=True)
                 
                 with open(os.path.join(prompts_dir, 'corrections.txt'), 'a') as f:
                     f.write(correction + '\n')
+                
+                # Update in-memory corrections
+                self.vision_service.add_correction(correction)
                 
                 # Clear the correction entry and show feedback
                 self.correction_entry.delete(0, 'end')
