@@ -120,7 +120,7 @@ class ReceiptProcessor(ctk.CTk):
         self.add_correction_button = ctk.CTkButton(
             self.right_scroll,
             text="Add",
-            command=None,  # No action yet
+            command=self.add_correction,  # Add new command
             state="disabled"
         )
         self.add_correction_button.grid(row=len(self.fields_to_display), column=3, padx=5, pady=5)
@@ -442,6 +442,28 @@ class ReceiptProcessor(ctk.CTk):
         focused = self.is_override_focused()
         if not focused:
             self.rotate_view()
+
+    def add_correction(self):
+        """Save the correction to src/prompts/corrections.txt"""
+        try:
+            correction = self.correction_entry.get().strip()
+            if correction:
+                import os
+                prompts_dir = os.path.join('src', 'prompts')
+                os.makedirs(prompts_dir, exist_ok=True)
+                
+                with open(os.path.join(prompts_dir, 'corrections.txt'), 'a') as f:
+                    f.write(correction + '\n')
+                
+                # Clear the correction entry and show feedback
+                self.correction_entry.delete(0, 'end')
+                self.status_label.configure(text="Correction saved")
+                self.after(2000, lambda: self.status_label.configure(text=""))
+                
+        except Exception as e:
+            print(f"Error saving correction: {e}")
+            self.status_label.configure(text=f"Error saving correction: {e}")
+            self.after(2000, lambda: self.status_label.configure(text=""))
 
 if __name__ == "__main__":
     app = ReceiptProcessor()
