@@ -160,24 +160,6 @@ class VisionAPIService:
         except Exception as e:
             raise Exception(f"API request failed: {str(e)}")
 
-    def handle_correction(self, original: Receipt, corrected: Receipt) -> str:
-        """Process corrections to improve future extractions
-        
-        Args:
-            original: Original Receipt object from API
-            corrected: Corrected Receipt object from user
-            
-        Returns:
-            String describing the correction for future prompts
-        """
-        corrections = [
-            f"When the receipt shows vendor '{original.vendor}', interpret as '{corrected.vendor}'",
-            f"When total amount shows '{original.total_amount}', interpret as '{corrected.total_amount}'",
-            f"When category shows '{original.category}', interpret as '{corrected.category}'"
-        ]
-            
-        return " | ".join(corrections)
-
     def analyze_image_raw(self, image_bytes: bytes, prompt: str) -> str:
         """Analyze an image with a custom prompt and return raw response"""
         try:

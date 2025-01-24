@@ -6,6 +6,7 @@ import queue
 from src.services.vision_service import VisionAPIService, Receipt
 from src.utils.config import get_debug_mode
 import tkinter
+from src.utils.correction_formatter import CorrectionFormatter, CorrectionRule
 
 class ReceiptProcessor(ctk.CTk):
     def __init__(self):
@@ -88,10 +89,11 @@ class ReceiptProcessor(ctk.CTk):
         self.right_scroll.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
         self.right_frame.grid_rowconfigure(0, weight=1)
         
-        # Create dictionary to store label widgets and entry fields
+        # Create dictionary to store label widgets, entry fields, and correction buttons
         self.field_labels = {}
         self.field_values = {}
-        self.field_overrides = {}  # New dictionary for override entries
+        self.field_overrides = {}
+        self.field_corrections = {}  # New dictionary for correction buttons
         
         # Create labels for each field
         for idx, field in enumerate(self.fields_to_display):
@@ -101,13 +103,26 @@ class ReceiptProcessor(ctk.CTk):
             value_label = ctk.CTkLabel(self.right_scroll, text="", width=200)
             value_label.grid(row=idx, column=1, padx=5, pady=5, sticky="w")
             
-            # Add override entry field
+            # Add override entry field with trace
             override_entry = ctk.CTkEntry(self.right_scroll, width=200)
             override_entry.grid(row=idx, column=2, padx=5, pady=5, sticky="w")
+            # Bind to key events to detect changes
+            override_entry.bind('<KeyRelease>', lambda e, f=field: self.on_override_change(f))
+            
+            # Add correction button for each field
+            correction_button = ctk.CTkButton(
+                self.right_scroll,
+                text="Correction",
+                width=100,
+                state="disabled",
+                command=lambda f=field: self.formulate_correction(f)
+            )
+            correction_button.grid(row=idx, column=3, padx=5, pady=5)
             
             self.field_labels[field] = label
             self.field_values[field] = value_label
             self.field_overrides[field] = override_entry
+            self.field_corrections[field] = correction_button  # Store correction buttons
         
         # Add correction label and entry field
         correction_label = ctk.CTkLabel(self.right_scroll, text="Correction:")
@@ -253,6 +268,7 @@ class ReceiptProcessor(ctk.CTk):
                 self.field_values[field].configure(text="")
                 self.field_values[field].update()  # Force immediate update of each field
                 self.field_overrides[field].delete(0, 'end')  # Clear override entries
+                self.field_corrections[field].configure(state="disabled")  # Disable correction buttons
             
             # Clear correction entry
             self.correction_entry.delete(0, 'end')
@@ -464,6 +480,28 @@ class ReceiptProcessor(ctk.CTk):
             print(f"Error saving correction: {e}")
             self.status_label.configure(text=f"Error saving correction: {e}")
             self.after(2000, lambda: self.status_label.configure(text=""))
+
+    def on_override_change(self, field):
+        """Enable/disable correction button based on override field content"""
+        override_value = self.field_overrides[field].get().strip()
+        self.field_corrections[field].configure(
+            state="normal" if override_value else "disabled"
+        )
+
+    def formulate_correction(self, field):
+        """Create correction text based on field and override value"""
+        rule = CorrectionRule(
+            field=field,
+            original_value=self.field_values[field].cget("text"),
+            corrected_value=self.field_overrides[field].get().strip(),
+            vendor_context=self.field_values['vendor'].cget("text") if field != 'vendor' else None
+        )
+        
+        correction_text = CorrectionFormatter.format_rule(rule)
+        
+        # Set the correction text in the main correction entry
+        self.correction_entry.delete(0, 'end')
+        self.correction_entry.insert(0, correction_text)
 
 if __name__ == "__main__":
     app = ReceiptProcessor()
