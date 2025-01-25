@@ -144,8 +144,7 @@ class VisionAPIService:
 
         if previous_corrections:
             correction_preamble = '''
-            \n\nAfter determining the values for the fields, please apply the following corrections.
-            These are very important, and should be applied to all receipts exactly as written:
+            \n\nAfter determining the values for the fields, please apply the following corrections.  These are very important, and should be applied to all receipts exactly as written:
             \n'''
             prompt += correction_preamble + previous_corrections
             

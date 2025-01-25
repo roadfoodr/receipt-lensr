@@ -4,7 +4,10 @@ or markdown.
 
 Fields to identify:
 - vendor: often in printed text
-- invoice: often in printed text
+- invoice: often in printed text.  If not found, look for one of the following to use as invoice:
+            - order number
+            - transaction ID or transaction number
+            - Account Number
 - total_amount: often in printed text
 - bill_date: usually in printed text.  Date format should be output as "MM/DD/YYYY"
 - paid_date: look in the upper right corner for handwritten blue text like "PD 12/31/23";
@@ -12,19 +15,20 @@ Fields to identify:
 - payment_method: look in the upper right corner for handwritten blue text like one of the following:
                   "CK 1234" or "CK # 2624" or "Ck #2701" 
                   (the prefix "CK" and/or "#" is not part of the payment method and should be omitted), 
-                  or "AMEX" (if the word AMEX or "PD AMEX" is present),
-                  or "VISA" (if the word VISA or "PD VISA" is present),
-                  or "PayPal" (if the word PayPal or "PD PayPal" is present)
+                  or "AMEX" (if the word AMEX or "PD AMEX" or "American Express" is present),
+                  or "VISA" (if the word "VISA" or "PD VISA" is present),
+                  or "PayPal" (if the word "PayPal" or "paypal" or "PD PayPal" is present anywhere)
 - item_type: brief (2-4 words) description of the general item type.  Some examples:
                 - "Graphic Design services"  
                 - "Supplies"  
                 - "Photography services"  
                 - "Shipping"  
                 - "Advertising"  
+                - "Subscription"
 - item: brief (3-6 words) description of the specific item, often in printed text
 - project: look in the upper right corner for a 4-digit number (without "PD" or "CK")
                   in handwritten blue text, usually starting with "2" or "1", often one of the following: 
-                  2716, 2641, 2643, 1400, General
+                  2716, 2641, 2643, 1400, General.  If not found, use "General".
 - expense_type: use your best judgement to categorize this expense among these specific categories:
                 - "Recording / Mixing"  
                 - "Mastering"  
@@ -38,6 +42,7 @@ Fields to identify:
                 - "Royalties"  
                 - "Tour Support"  
                 - "Licensing"
+                If expense_type is not found, use "General".
 
 Required format:
 {
@@ -62,7 +67,7 @@ Example with missing fields:
     "item_type": "General Item",
     "item": "not found",
     "expense_type": "Expense Type",
-    "invoice": "123456",
-    "project": "not found",
+    "invoice": "not found",
+    "project": "General",
     "payment_method": "1234",
 } 
