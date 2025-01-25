@@ -22,8 +22,10 @@ class Receipt:
     paid_date: Optional[str] = None
     payment_method: Optional[str] = None
     total_amount: Optional[str] = None
+    item_type: Optional[str] = None
     item: Optional[str] = None
     project: Optional[str] = None
+    expense_type: Optional[str] = None
     upper_right: Optional[str] = None
 
 class VisionAPIService:
@@ -141,7 +143,11 @@ class VisionAPIService:
             prompt = f.read()
 
         if previous_corrections:
-            prompt += "\nPrevious corrections:\n" + previous_corrections
+            correction_preamble = '''
+            \n\nAfter determining the values for the fields, please apply the following corrections.
+            These are very important, and should be applied to all receipts exactly as written:
+            \n'''
+            prompt += correction_preamble + previous_corrections
             
         return prompt
 
@@ -182,8 +188,10 @@ class VisionAPIService:
                 paid_date=data.get('paid_date', 'not found'),
                 payment_method=data.get('payment_method', 'not found'),
                 total_amount=data.get('total_amount', 'not found'),
+                item_type=data.get('item_type', 'not found'),
                 item=data.get('item', 'not found'),
                 project=data.get('project', 'not found'),
+                expense_type=data.get('expense_type', 'not found'),
                 upper_right=data.get('upper_right', 'not found')
             )
             

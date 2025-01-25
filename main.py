@@ -19,7 +19,8 @@ class ReceiptProcessor(ctk.CTk):
         self.current_receipt = None
         self.fields_to_display = [
             'vendor', 'invoice', 'bill_date', 'paid_date', 
-            'payment_method', 'total_amount', 'item', 'project'
+            'payment_method', 'total_amount', 'item_type', 'item',
+            'project', 'expense_type'
         ]
         
         # Configure main window
@@ -100,8 +101,16 @@ class ReceiptProcessor(ctk.CTk):
             label = ctk.CTkLabel(self.right_scroll, text=f"{field.replace('_', ' ').title()}:")
             label.grid(row=idx, column=0, padx=5, pady=5, sticky="e")
             
-            value_label = ctk.CTkLabel(self.right_scroll, text="", width=200)
-            value_label.grid(row=idx, column=1, padx=5, pady=5, sticky="w")
+            # Replace Label with TextBox for selectable text
+            value_textbox = ctk.CTkTextbox(self.right_scroll, width=200, height=30)
+            value_textbox.grid(row=idx, column=1, padx=5, pady=(4, 5), sticky="w")  # Adjust top padding
+            # Make it read-only and style it like a label
+            value_textbox.configure(
+                state="disabled",
+                fg_color="transparent",  # Makes background match parent
+                border_width=0,  # Removes border
+                text_color=("black", "white")  # Black text in light mode, white in dark mode
+            )
             
             # Add override entry field with trace
             override_entry = ctk.CTkEntry(self.right_scroll, width=200)
@@ -120,9 +129,9 @@ class ReceiptProcessor(ctk.CTk):
             correction_button.grid(row=idx, column=3, padx=5, pady=5)
             
             self.field_labels[field] = label
-            self.field_values[field] = value_label
+            self.field_values[field] = value_textbox  # Store textbox instead of label
             self.field_overrides[field] = override_entry
-            self.field_corrections[field] = correction_button  # Store correction buttons
+            self.field_corrections[field] = correction_button
         
         # Add correction label and entry field
         correction_label = ctk.CTkLabel(self.right_scroll, text="Correction:")
@@ -265,8 +274,9 @@ class ReceiptProcessor(ctk.CTk):
             
             # Clear all field values and override entries
             for field in self.fields_to_display:
-                self.field_values[field].configure(text="")
-                self.field_values[field].update()  # Force immediate update of each field
+                self.field_values[field].configure(state="normal")
+                self.field_values[field].delete("1.0", "end")  # Clear textbox
+                self.field_values[field].configure(state="disabled")
                 self.field_overrides[field].delete(0, 'end')  # Clear override entries
                 self.field_corrections[field].configure(state="disabled")  # Disable correction buttons
             
@@ -380,13 +390,16 @@ class ReceiptProcessor(ctk.CTk):
         if self.current_receipt:
             for field in self.fields_to_display:
                 value = getattr(self.current_receipt, field)
-                # Reset text color to default and update value
-                self.field_values[field].configure(
-                    text=str(value),
-                    text_color=("black", "white")  # (light mode, dark mode)
-                )
+                # Enable textbox for editing, update text, then disable again
+                textbox = self.field_values[field]
+                textbox.configure(state="normal")
+                textbox.delete("1.0", "end")
+                textbox.insert("1.0", str(value))
+                textbox.configure(state="disabled")
+                # Reset text color to default
+                textbox.configure(text_color=("black", "white"))  # (light mode, dark mode)
             self.commit_button.configure(state="normal")
-            self.add_correction_button.configure(state="normal")  # Enable add button
+            self.add_correction_button.configure(state="normal")
 
     def commit_to_datastore(self):
         """Save the current receipt data to CSV file"""
@@ -417,7 +430,7 @@ class ReceiptProcessor(ctk.CTk):
                 
                 writer.writerow(receipt_dict)
                 
-                # Grey out the field values and clear overrides
+                # Update the greying out of values
                 for field in self.fields_to_display:
                     self.field_values[field].configure(text_color="grey")
                     self.field_overrides[field].delete(0, 'end')  # Clear override entries
@@ -496,9 +509,9 @@ class ReceiptProcessor(ctk.CTk):
         """Create correction text based on field and override value"""
         rule = CorrectionRule(
             field=field,
-            original_value=self.field_values[field].cget("text"),
+            original_value=self.field_values[field].get("1.0", "end-1c"),  # Get text from textbox
             corrected_value=self.field_overrides[field].get().strip(),
-            vendor_context=self.field_values['vendor'].cget("text") if field != 'vendor' else None
+            vendor_context=self.field_values['vendor'].get("1.0", "end-1c") if field != 'vendor' else None
         )
         
         correction_text = CorrectionFormatter.format_rule(rule)

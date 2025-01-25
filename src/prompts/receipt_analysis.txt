@@ -15,11 +15,29 @@ Fields to identify:
                   or "AMEX" (if the word AMEX or "PD AMEX" is present),
                   or "VISA" (if the word VISA or "PD VISA" is present),
                   or "PayPal" (if the word PayPal or "PD PayPal" is present)
-- item: brief (2-4 words) description of the item, often in printed text
+- item_type: brief (2-4 words) description of the general item type.  Some examples:
+                - "Graphic Design services"  
+                - "Supplies"  
+                - "Photography services"  
+                - "Shipping"  
+                - "Advertising"  
+- item: brief (3-6 words) description of the specific item, often in printed text
 - project: look in the upper right corner for a 4-digit number (without "PD" or "CK")
                   in handwritten blue text, usually starting with "2" or "1", often one of the following: 
                   2716, 2641, 2643, 1400, General
-- upper_right: all of the handwritten blue text found in the upper right corner
+- expense_type: use your best judgement to categorize this expense among these specific categories:
+                - "Recording / Mixing"  
+                - "Mastering"  
+                - "Advertising"  
+                - "Art"  
+                - "Distribution"  
+                - "Duplication"  
+                - "Promotion"  
+                - "Shipping"  
+                - "General"  
+                - "Royalties"  
+                - "Tour Support"  
+                - "Licensing"
 
 Required format:
 {
@@ -27,11 +45,12 @@ Required format:
     "bill_date": "03/14/2024",
     "paid_date": "04/17/2024",
     "total_amount": 123.45,
-    "item": "Item",
+    "item_type": "General Item",
+    "item": "Specific Item",
+    "expense_type": "Expense Type",
     "invoice": "123456",
     "project": "2716",
-    "payment_method": "Ck 1234",
-    "upper_right": "all blue text found in upper right area"
+    "payment_method": "1234",
 }
 
 Example with missing fields:
@@ -40,9 +59,10 @@ Example with missing fields:
     "bill_date": "03/14/2024",
     "paid_date": "04/17/2024",
     "total_amount": 123.45,
+    "item_type": "General Item",
     "item": "not found",
+    "expense_type": "Expense Type",
     "invoice": "123456",
     "project": "not found",
-    "payment_method": "Ck 1234",
-    "upper_right": "not found"
+    "payment_method": "1234",
 } 
