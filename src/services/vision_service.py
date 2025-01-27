@@ -131,6 +131,14 @@ class VisionAPIService:
             if os.path.exists(corrections_path):
                 with open(corrections_path, 'r') as f:
                     corrections = f.read()
+                    
+            # Print corrections if debug mode is enabled
+            from src.utils.config import get_debug_mode
+            if get_debug_mode():
+                print("\n=== LOADED CORRECTIONS ===")
+                print(corrections)
+                print("=========================\n")
+                    
             return corrections
         except Exception as e:
             print(f"Warning: Failed to load corrections: {e}")

@@ -144,10 +144,20 @@ class ReceiptProcessor(ctk.CTk):
         self.add_correction_button = ctk.CTkButton(
             self.right_scroll,
             text="Add",
-            command=self.add_correction,  # Add new command
+            width=100,  # Set fixed width
+            command=self.add_correction,
             state="disabled"
         )
         self.add_correction_button.grid(row=len(self.fields_to_display), column=3, padx=5, pady=5)
+        
+        # Add reload button
+        self.reload_correction_button = ctk.CTkButton(
+            self.right_scroll,
+            text="Reload",
+            width=100,
+            command=self.reload_corrections
+        )
+        self.reload_correction_button.grid(row=len(self.fields_to_display), column=4, padx=5, pady=5)  # Move to column 4
         
         # Add commit button (moved down one row)
         self.commit_button = ctk.CTkButton(
@@ -519,6 +529,18 @@ class ReceiptProcessor(ctk.CTk):
         # Set the correction text in the main correction entry
         self.correction_entry.delete(0, 'end')
         self.correction_entry.insert(0, correction_text)
+
+    def reload_corrections(self):
+        """Reload corrections from disk"""
+        try:
+            self.vision_service.corrections = self.vision_service._load_corrections()
+            self.status_label.configure(text="Corrections reloaded")
+            self.after(2000, lambda: self.status_label.configure(text=""))
+            
+        except Exception as e:
+            print(f"Error reloading corrections: {e}")
+            self.status_label.configure(text=f"Error reloading corrections: {e}")
+            self.after(2000, lambda: self.status_label.configure(text=""))
 
 if __name__ == "__main__":
     app = ReceiptProcessor()
