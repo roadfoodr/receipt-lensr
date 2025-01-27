@@ -152,42 +152,57 @@ class ReceiptProcessor(ctk.CTk):
             self.field_corrections[field] = correction_button
             self.field_locks[field] = lock_checkbox  # Store checkbox reference
         
-        # Add correction label and entry field
+        # Add correction label and entry field with spacing above
         correction_label = ctk.CTkLabel(self.right_scroll, text="Correction:")
-        correction_label.grid(row=len(self.fields_to_display)+1, column=0, padx=5, pady=5, sticky="e")
-        
-        self.correction_entry = ctk.CTkEntry(self.right_scroll, width=400)  # Match width to end of column 2
-        self.correction_entry.grid(row=len(self.fields_to_display)+1, column=1, columnspan=2, padx=5, pady=5, sticky="ew")
-        
-        # Add correction button (moved to column 3)
+        correction_label.grid(row=len(self.fields_to_display)+2, column=0, padx=5, pady=5, sticky="e")
+
+        # Add a separator line above the correction section
+        separator = ctk.CTkFrame(self.right_scroll, height=2)
+        separator.grid(row=len(self.fields_to_display)+1, column=0, columnspan=5, sticky="ew", pady=10)
+
+        self.correction_entry = ctk.CTkEntry(self.right_scroll, width=400)
+        self.correction_entry.grid(row=len(self.fields_to_display)+2, column=1, columnspan=2, padx=5, pady=5, sticky="ew")
+
+        # Add and Reload buttons to the right of correction entry
         self.add_correction_button = ctk.CTkButton(
             self.right_scroll,
             text="Add",
-            width=100,  # Set fixed width
+            width=100,
             command=self.add_correction,
             state="disabled"
         )
-        self.add_correction_button.grid(row=len(self.fields_to_display)+1, column=3, padx=5, pady=5)
-        
-        # Add reload button
+        self.add_correction_button.grid(row=len(self.fields_to_display)+2, column=3, padx=5, pady=5)
+
         self.reload_correction_button = ctk.CTkButton(
             self.right_scroll,
             text="Reload",
             width=100,
             command=self.reload_corrections
         )
-        self.reload_correction_button.grid(row=len(self.fields_to_display)+1, column=4, padx=5, pady=5)  # Move to column 4
+        self.reload_correction_button.grid(row=len(self.fields_to_display)+2, column=4, padx=5, pady=5)
+
+        # Create frame to hold the two buttons and center them together
+        button_frame = ctk.CTkFrame(self.right_scroll)
+        button_frame.grid(row=len(self.fields_to_display)+3, column=1, 
+                         columnspan=2, pady=20)
+
+        # Clear form button in button frame
+        self.clear_button = ctk.CTkButton(
+            button_frame,
+            text="Clear form",
+            command=self.clear_form
+        )
+        self.clear_button.pack(side="left", padx=5)
         
-        # Add commit button (moved down one row)
+        # Commit button in button frame
         self.commit_button = ctk.CTkButton(
-            self.right_scroll,
-            text="Commit to CSV",
+            button_frame,
+            text="Commit to datastore",
             command=self.commit_to_datastore,
             state="disabled"
         )
-        self.commit_button.grid(row=len(self.fields_to_display)+2, column=0, 
-                              columnspan=2, pady=20)
-        
+        self.commit_button.pack(side="left", padx=5)
+
         # Bind keyboard shortcuts to main window
         self.bind('<space>', self.handle_space)
         self.bind('<Return>', self.handle_return)
@@ -565,6 +580,34 @@ class ReceiptProcessor(ctk.CTk):
             print(f"Error reloading corrections: {e}")
             self.status_label.configure(text=f"Error reloading corrections: {e}")
             self.after(2000, lambda: self.status_label.configure(text=""))
+
+    def clear_form(self):
+        """Clear all form fields, overrides, checkboxes, and entries"""
+        # Clear all field values and override entries
+        for field in self.fields_to_display:
+            # Clear textbox
+            self.field_values[field].configure(state="normal")
+            self.field_values[field].delete("1.0", "end")
+            self.field_values[field].configure(state="disabled")
+            
+            # Clear override entry
+            self.field_overrides[field].delete(0, 'end')
+            
+            # Uncheck lock checkbox
+            self.field_locks[field].deselect()
+            
+            # Disable correction button
+            self.field_corrections[field].configure(state="disabled")
+        
+        # Clear correction entry
+        self.correction_entry.delete(0, 'end')
+        
+        # Disable commit and add correction buttons
+        self.commit_button.configure(state="disabled")
+        self.add_correction_button.configure(state="disabled")
+        
+        # Clear current receipt
+        self.current_receipt = None
 
 if __name__ == "__main__":
     app = ReceiptProcessor()
