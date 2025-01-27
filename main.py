@@ -95,30 +95,48 @@ class ReceiptProcessor(ctk.CTk):
         self.field_values = {}
         self.field_overrides = {}
         self.field_corrections = {}  # New dictionary for correction buttons
+        self.field_locks = {}  # New dictionary for lock checkboxes
         
         # Create labels for each field
         for idx, field in enumerate(self.fields_to_display):
+            # Add column headers if this is the first field
+            if idx == 0:
+                value_label = ctk.CTkLabel(self.right_scroll, text="Value")
+                value_label.grid(row=0, column=1, padx=5, pady=5)
+                
+                override_label = ctk.CTkLabel(self.right_scroll, text="Override")
+                override_label.grid(row=0, column=2, padx=5, pady=5)
+                
+                lock_label = ctk.CTkLabel(self.right_scroll, text="Lock")
+                lock_label.grid(row=0, column=3, padx=5, pady=5)
+            
             label = ctk.CTkLabel(self.right_scroll, text=f"{field.replace('_', ' ').title()}:")
-            label.grid(row=idx, column=0, padx=5, pady=5, sticky="e")
+            label.grid(row=idx+1, column=0, padx=5, pady=5, sticky="e")  # Shift down by 1
             
             # Replace Label with TextBox for selectable text
             value_textbox = ctk.CTkTextbox(self.right_scroll, width=200, height=30)
-            value_textbox.grid(row=idx, column=1, padx=5, pady=(4, 5), sticky="w")  # Adjust top padding
-            # Make it read-only and style it like a label
-            value_textbox.configure(
-                state="disabled",
-                fg_color="transparent",  # Makes background match parent
-                border_width=0,  # Removes border
-                text_color=("black", "white")  # Black text in light mode, white in dark mode
-            )
+            value_textbox.grid(row=idx+1, column=1, padx=5, pady=(4, 5), sticky="w")  # Shift down by 1
             
             # Add override entry field with trace
             override_entry = ctk.CTkEntry(self.right_scroll, width=200)
-            override_entry.grid(row=idx, column=2, padx=5, pady=5, sticky="w")
-            # Bind to key events to detect changes
-            override_entry.bind('<KeyRelease>', lambda e, f=field: self.on_override_change(f))
+            override_entry.grid(row=idx+1, column=2, padx=5, pady=5, sticky="w")  # Shift down by 1
             
-            # Add correction button for each field
+            # Bind the override entry to enable/disable correction button
+            override_entry.bind('<KeyRelease>', 
+                lambda event, f=field: self.on_override_change(f))
+            
+            # Add lock checkbox with custom styling
+            lock_checkbox = ctk.CTkCheckBox(
+                self.right_scroll,
+                text="",
+                width=20,
+                border_width=1,  # Thinner border
+                fg_color=["#3B8ED0", "#1F6AA5"],  # Match default button color
+                border_color=["#3B8ED0", "#1F6AA5"]  # Match border to fg_color
+            )
+            lock_checkbox.grid(row=idx+1, column=3, padx=5, pady=5)
+            
+            # Add correction button
             correction_button = ctk.CTkButton(
                 self.right_scroll,
                 text="Correction",
@@ -126,19 +144,20 @@ class ReceiptProcessor(ctk.CTk):
                 state="disabled",
                 command=lambda f=field: self.formulate_correction(f)
             )
-            correction_button.grid(row=idx, column=3, padx=5, pady=5)
+            correction_button.grid(row=idx+1, column=4, padx=5, pady=5)  # Shift down by 1
             
             self.field_labels[field] = label
-            self.field_values[field] = value_textbox  # Store textbox instead of label
+            self.field_values[field] = value_textbox
             self.field_overrides[field] = override_entry
             self.field_corrections[field] = correction_button
+            self.field_locks[field] = lock_checkbox  # Store checkbox reference
         
         # Add correction label and entry field
         correction_label = ctk.CTkLabel(self.right_scroll, text="Correction:")
-        correction_label.grid(row=len(self.fields_to_display), column=0, padx=5, pady=5, sticky="e")
+        correction_label.grid(row=len(self.fields_to_display)+1, column=0, padx=5, pady=5, sticky="e")
         
         self.correction_entry = ctk.CTkEntry(self.right_scroll, width=400)  # Match width to end of column 2
-        self.correction_entry.grid(row=len(self.fields_to_display), column=1, columnspan=2, padx=5, pady=5, sticky="ew")
+        self.correction_entry.grid(row=len(self.fields_to_display)+1, column=1, columnspan=2, padx=5, pady=5, sticky="ew")
         
         # Add correction button (moved to column 3)
         self.add_correction_button = ctk.CTkButton(
@@ -148,7 +167,7 @@ class ReceiptProcessor(ctk.CTk):
             command=self.add_correction,
             state="disabled"
         )
-        self.add_correction_button.grid(row=len(self.fields_to_display), column=3, padx=5, pady=5)
+        self.add_correction_button.grid(row=len(self.fields_to_display)+1, column=3, padx=5, pady=5)
         
         # Add reload button
         self.reload_correction_button = ctk.CTkButton(
@@ -157,7 +176,7 @@ class ReceiptProcessor(ctk.CTk):
             width=100,
             command=self.reload_corrections
         )
-        self.reload_correction_button.grid(row=len(self.fields_to_display), column=4, padx=5, pady=5)  # Move to column 4
+        self.reload_correction_button.grid(row=len(self.fields_to_display)+1, column=4, padx=5, pady=5)  # Move to column 4
         
         # Add commit button (moved down one row)
         self.commit_button = ctk.CTkButton(
@@ -166,7 +185,7 @@ class ReceiptProcessor(ctk.CTk):
             command=self.commit_to_datastore,
             state="disabled"
         )
-        self.commit_button.grid(row=len(self.fields_to_display) + 1, column=0, 
+        self.commit_button.grid(row=len(self.fields_to_display)+2, column=0, 
                               columnspan=2, pady=20)
         
         # Bind keyboard shortcuts to main window
@@ -282,13 +301,16 @@ class ReceiptProcessor(ctk.CTk):
             # Force update the display immediately
             self.status_label.update()
             
-            # Clear all field values and override entries
+            # Clear all field values and override entries (except locked ones)
             for field in self.fields_to_display:
-                self.field_values[field].configure(state="normal")
-                self.field_values[field].delete("1.0", "end")  # Clear textbox
-                self.field_values[field].configure(state="disabled")
-                self.field_overrides[field].delete(0, 'end')  # Clear override entries
-                self.field_corrections[field].configure(state="disabled")  # Disable correction buttons
+                # Only clear if not locked
+                if not self.field_locks[field].get():
+                    self.field_values[field].configure(state="normal")
+                    self.field_values[field].delete("1.0", "end")  # Clear textbox
+                    self.field_values[field].configure(state="disabled")
+                    self.field_overrides[field].delete(0, 'end')
+                
+                self.field_corrections[field].configure(state="disabled")
             
             # Clear correction entry
             self.correction_entry.delete(0, 'end')
@@ -399,15 +421,17 @@ class ReceiptProcessor(ctk.CTk):
         """Update the right panel with receipt data"""
         if self.current_receipt:
             for field in self.fields_to_display:
-                value = getattr(self.current_receipt, field)
-                # Enable textbox for editing, update text, then disable again
-                textbox = self.field_values[field]
-                textbox.configure(state="normal")
-                textbox.delete("1.0", "end")
-                textbox.insert("1.0", str(value))
-                textbox.configure(state="disabled")
-                # Reset text color to default
-                textbox.configure(text_color=("black", "white"))  # (light mode, dark mode)
+                # Only update if the field is not locked
+                if not self.field_locks[field].get():
+                    value = getattr(self.current_receipt, field)
+                    # Enable textbox for editing, update text, then disable again
+                    textbox = self.field_values[field]
+                    textbox.configure(state="normal")
+                    textbox.delete("1.0", "end")
+                    textbox.insert("1.0", str(value))
+                    textbox.configure(state="disabled")
+                    # Reset text color to default
+                    textbox.configure(text_color=("black", "white"))  # (light mode, dark mode)
             self.commit_button.configure(state="normal")
             self.add_correction_button.configure(state="normal")
 
