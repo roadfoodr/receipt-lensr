@@ -10,14 +10,15 @@ Fields to identify:
             - Account Number
 - total_amount: often in printed text
 - bill_date: usually in printed text.  Date format should be output as "MM/DD/YYYY"
-- paid_date: look in the upper right corner for handwritten blue text like "PD 12/31/23";
+- paid_date: look in the upper right corner for handwritten blue text representing a date like "PD 12/31/24";
              if not found use bill_date.  The prefix "PD" is not part of the date and should be omitted.
-- payment_method: look in the upper right corner for handwritten blue text like one of the following:
+- payment_method: look in the upper right corner for handwritten blue text including a 4-digit number 
+                  like one of the following:
                   "CK 1234" or "CK # 2624" or "Ck #2701" 
                   (the prefix "CK" and/or "#" is not part of the payment method and should be omitted), 
                   or "AMEX" (if the word AMEX or "PD AMEX" or "American Express" is present),
-                  or "VISA" (if the word "VISA" or "PD VISA" is present),
-                  or "PayPal" (if the word "PayPal" or "paypal" or "PD PayPal" is present anywhere)
+                  or "VISA" (if the word "VISA" or "Visa" or "PD VISA" is present),
+                  or "PayPal" (if the word "PayPal" or "paypal.com" or "PD PayPal" is present anywhere)
 - item_type: brief (2-4 words) description of the general item type.  Some examples:
                 - "Graphic Design services"  
                 - "Supplies"  
