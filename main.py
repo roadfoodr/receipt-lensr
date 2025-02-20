@@ -4,7 +4,7 @@ from PIL import Image, ImageTk
 import threading
 import queue
 from src.services.vision_service import VisionAPIService, Receipt
-from src.utils.config import get_debug_mode
+from src.utils.config import get_debug_mode, load_config
 import tkinter
 from src.utils.correction_formatter import CorrectionFormatter, CorrectionRule
 
@@ -609,6 +609,15 @@ class ReceiptProcessor(ctk.CTk):
         self.current_receipt = None
 
 if __name__ == "__main__":
-    app = ReceiptProcessor()
-    app.protocol("WM_DELETE_WINDOW", app.on_closing)
-    app.mainloop()
+    # Check if eval mode is enabled
+    config = load_config()
+    if config.get('eval_mode', False):
+        print("Running in evaluation mode...")
+        from src.evals.evaluation_manager import EvaluationManager
+        manager = EvaluationManager()
+        manager.run_evaluations()
+    else:
+        # Run interactive UI as before
+        app = ReceiptProcessor()
+        app.protocol("WM_DELETE_WINDOW", app.on_closing)
+        app.mainloop()
