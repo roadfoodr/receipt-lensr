@@ -208,9 +208,8 @@ class ReceiptProcessor(ctk.CTk):
         self.bind('<Return>', self.handle_return)
         self.bind('r', self.handle_r)
         
-        # Initialize the Vision API Service without explicit api_key
-        # It will load from config automatically
-        self.vision_service = VisionAPIService(use_anthropic=False)
+        # Initialize the Vision API Service
+        self.vision_service = VisionAPIService()  # Will use vendor from config.json
         
         # Add debug print to verify key
         # print(f"Vision service initialized with key: {self.vision_service.api_key[:8]}...") # Only show first 8 chars for security

@@ -11,20 +11,15 @@ DEFAULT_CONFIG = {
     "debug_mode": False
 }
 
-def load_config(config_path: str = DEFAULT_CONFIG_PATH) -> dict:
-    """Load configuration from JSON file, creating default if not exists"""
-    # print(f"Loading config from {config_path}")
+def load_config():
+    """Load configuration from config.json"""
+    config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config.json')
     try:
-        if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
-                return json.load(f)
-        else:
-            # Create default config file if it doesn't exist
-            save_config(DEFAULT_CONFIG, config_path)
-            return DEFAULT_CONFIG
+        with open(config_path, 'r') as f:
+            return json.load(f)
     except Exception as e:
         print(f"Error loading config: {e}")
-        return DEFAULT_CONFIG
+        return {}
 
 def save_config(config: dict, config_path: str = DEFAULT_CONFIG_PATH) -> None:
     """Save configuration to JSON file"""
@@ -34,12 +29,25 @@ def save_config(config: dict, config_path: str = DEFAULT_CONFIG_PATH) -> None:
     except Exception as e:
         print(f"Error saving config: {e}")
 
-def get_api_key(use_anthropic: bool = False) -> Optional[str]:
-    """Get the appropriate API key based on service selection"""
+def get_vendor() -> str:
+    """Get the vendor from config"""
     config = load_config()
-    return config.get('anthropic_api_key' if use_anthropic else 'openai_api_key')
+    return config.get('use_vendor', 'openai').lower()  # Default to OpenAI if not specified
+
+def get_api_key(vendor: str) -> str:
+    """Get API key for specified vendor"""
+    config = load_config()
+    key_mapping = {
+        'openai': 'openai_api_key',
+        'anthropic': 'anthropic_api_key',
+        'gemini': 'gemini_api_key'
+    }
+    key_name = key_mapping.get(vendor.lower())
+    if not key_name:
+        raise ValueError(f"Unsupported vendor: {vendor}")
+    return config.get(key_name)
 
 def get_debug_mode() -> bool:
-    """Get the debug mode setting"""
+    """Get debug mode setting"""
     config = load_config()
     return config.get('debug_mode', False)

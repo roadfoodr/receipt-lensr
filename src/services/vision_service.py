@@ -7,6 +7,9 @@ from typing import Optional, List
 import requests
 import json
 import os
+from .vision_adapter import Receipt
+from .openai_adapter import OpenAIVisionAdapter
+from .anthropic_adapter import AnthropicVisionAdapter
 
 @dataclass
 class ReceiptItem:
@@ -29,99 +32,38 @@ class Receipt:
     upper_right: Optional[str] = None
 
 class VisionAPIService:
-    def __init__(self, api_key: str = None, use_anthropic: bool = False):
+    def __init__(self, api_key: str = None, vendor: str = None):
         """Initialize the Vision API service"""
-        from src.utils.config import get_api_key
+        from src.utils.config import get_api_key, get_vendor
         
-        self.api_key = api_key or get_api_key(use_anthropic)
-        if not self.api_key:
-            raise ValueError("No API key available. Please check your config.json")
+        # Get vendor from config if not provided
+        self.vendor = vendor or get_vendor()
+        if not self.vendor:
+            raise ValueError("No vendor specified. Please check your config.json")
             
-        self.use_anthropic = use_anthropic
-        self._setup_api_config()
+        # Get API key for the specified vendor
+        self.api_key = api_key or get_api_key(self.vendor)
+        if not self.api_key:
+            raise ValueError(f"No API key available for {self.vendor}. Please check your config.json")
+            
+        # Initialize the appropriate adapter based on vendor
+        self.adapter = self._create_adapter()
         
-        # Initialize corrections to empty string before loading
+        # Initialize corrections
         self.corrections = ""
-        # Then try to load from disk
         self.corrections = self._load_corrections()
-
-    def _setup_api_config(self):
-        """Set up API configuration based on service type"""
-        if self.use_anthropic:
-            self.api_url = "https://api.anthropic.com/v1/messages"
-            self.model = "claude-3-haiku-20240307"
-            self.headers = {
-                "x-api-key": self.api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json"
-            }
-        else:
-            self.api_url = "https://api.openai.com/v1/chat/completions"
-            self.model = "gpt-4o-mini"
-            self.headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-
-    def _create_payload(self, prompt: str, image_base64: str) -> dict:
-        """Create API payload based on service type"""
-        if self.use_anthropic:
-            return {
-                "messages": [{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/jpeg",
-                                "data": image_base64
-                            }
-                        }
-                    ]
-                }],
-                "model": self.model,
-                "max_tokens": 1024
-            }
-        else:
-            return {
-                "model": self.model,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{image_base64}"
-                                }
-                            }
-                        ]
-                    }
-                ],
-                "max_tokens": 1024
-            }
-
-    def _make_request(self, payload: dict) -> str:
-        """Make API request and extract response text"""
-        response = requests.post(
-            self.api_url,
-            headers=self.headers,
-            json=payload
-        )
-        response.raise_for_status()
         
-        if self.use_anthropic:
-            return response.json()['content'][0]['text']
+    def _create_adapter(self):
+        """Create the appropriate adapter based on vendor"""
+        if self.vendor.lower() == "anthropic":
+            return AnthropicVisionAdapter(self.api_key)
+        elif self.vendor.lower() == "openai":
+            return OpenAIVisionAdapter(self.api_key)
+        elif self.vendor.lower() == "gemini":
+            raise NotImplementedError("Gemini adapter not yet implemented")
         else:
-            return response.json()['choices'][0]['message']['content']
+            raise ValueError(f"Unsupported vendor: {self.vendor}")
 
-    def _encode_image(self, image_bytes: bytes) -> str:
-        """Convert image bytes to base64 string"""
-        return base64.b64encode(image_bytes).decode('utf-8')
-        
     def _load_corrections(self) -> str:
         """Load corrections from corrections.txt as raw text"""
         corrections_path = os.path.join(os.path.dirname(__file__), '..', 'prompts', 'corrections.txt')
@@ -175,45 +117,18 @@ class VisionAPIService:
                 print(prompt)
                 print("=============\n")
             
-            # Use analyze_image_raw to get the response
-            result = self.analyze_image_raw(image_bytes, prompt)
+            # Use the adapter to analyze the image
+            result = self.adapter.analyze_receipt(image_bytes, prompt)
             
-            # Clean up markdown code blocks if present
-            if result.startswith('```'):
-                result = result.split('```')[1]
-                if result.startswith('json'):
-                    result = result[4:]
-                result = result.strip()
-            
-            # Parse the JSON response into our dataclass
-            data = json.loads(result)
-            
-            return Receipt(
-                vendor=data.get('vendor', 'not found'),
-                invoice=data.get('invoice', 'not found'),
-                bill_date=data.get('bill_date', 'not found'),
-                paid_date=data.get('paid_date', 'not found'),
-                payment_method=data.get('payment_method', 'not found'),
-                total_amount=data.get('total_amount', 'not found'),
-                item_type=data.get('item_type', 'not found'),
-                item=data.get('item', 'not found'),
-                project=data.get('project', 'not found'),
-                expense_type=data.get('expense_type', 'not found'),
-                upper_right=data.get('upper_right', 'not found')
-            )
+            # Parse the response into a Receipt object
+            return self.adapter.parse_response(result)
             
         except Exception as e:
-            raise Exception(f"API request failed: {str(e)}")
+            raise Exception(f"Receipt analysis failed: {str(e)}")
 
     def analyze_image_raw(self, image_bytes: bytes, prompt: str) -> str:
         """Analyze an image with a custom prompt and return raw response"""
-        try:
-            base64_image = self._encode_image(image_bytes)
-            payload = self._create_payload(prompt, base64_image)
-            return self._make_request(payload)
-                
-        except Exception as e:
-            raise Exception(f"API request failed: {str(e)}")
+        return self.adapter.analyze_receipt(image_bytes, prompt)
 
     def add_correction(self, correction: str):
         """Add a new correction to memory"""
