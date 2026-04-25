@@ -3,16 +3,16 @@ sys.path.append('.')
 from src.services.vision_service import VisionAPIService
 import json
 
-def test_vision():
+def test_vision(image_path: str = "test/test_receipt.jpg"):
     svc = VisionAPIService()
     print(f"Vendor:  {svc.vendor}")
     print(f"Model:   {svc.adapter.model}")
     print(f"API URL: {svc.adapter.api_url}")
     print(f"API Key: {svc.api_key[:8]}...")
 
-    with open("test/test_receipt.jpg", "rb") as f:
+    with open(image_path, "rb") as f:
         image_bytes = f.read()
-    print(f"\nImage: test/test_receipt.jpg ({len(image_bytes)} bytes)")
+    print(f"\nImage: {image_path} ({len(image_bytes)} bytes)")
 
     prompt = svc._build_prompt()
     print(f"\nPrompt ({len(prompt)} chars):\n{'-'*40}\n{prompt}\n{'-'*40}")
@@ -26,4 +26,5 @@ def test_vision():
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    test_vision()
+    image_path = sys.argv[1] if len(sys.argv) > 1 else "test/test_receipt.jpg"
+    test_vision(image_path)

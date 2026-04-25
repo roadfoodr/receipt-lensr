@@ -15,6 +15,7 @@ src/prompts/corrections_*.txt
 test/eval_images/
 test/*.jpg
 wrangle/monthly_template.csv
+.specstory/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

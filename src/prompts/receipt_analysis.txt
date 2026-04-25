@@ -29,7 +29,7 @@ Fields to identify:
 - item: brief (3-6 words) description of the specific item, often in printed text
 - project: look in the upper right corner for a 4-digit number (without "PD" or "CK")
                   in handwritten blue text, usually starting with "2" or "1", often one of the following: 
-                  2716, 2641, 2643, 1400, General.  If not found, use "General".
+                  2716, 2641, 2643, 2878, 2903, 1400, General.  If not found, use "General".
 - expense_type: use your best judgement to categorize this expense among these specific categories:
                 - "Recording / Mixing"  
                 - "Mastering"  
