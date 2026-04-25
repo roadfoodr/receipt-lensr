@@ -11,12 +11,20 @@ project_root = os.path.dirname(script_dir)
 input_path = os.path.join(project_root, 'output', 'receipts.csv')
 df = pd.read_csv(input_path)
 
-# Read the template file
-template_path = os.path.join(project_root, 'wrangle', 'monthly_template.csv')
-template_df = pd.read_csv(template_path)
-
-# Replace "not found" with empty string
+# Replace "not found" with empty string before date parsing
 df = df.replace('not found', '')
+
+# Determine the year from the data to pick the right template
+data_year = pd.to_datetime(df['paid_date'], format='mixed').min().year
+year_template_path = os.path.join(project_root, 'wrangle', f'monthly_template_{data_year}.csv')
+fallback_template_path = os.path.join(project_root, 'wrangle', 'monthly_template.csv')
+if os.path.isfile(year_template_path):
+    template_path = year_template_path
+    print(f"Using year-specific template: monthly_template_{data_year}.csv")
+else:
+    template_path = fallback_template_path
+    print(f"No template for {data_year}, falling back to monthly_template.csv")
+template_df = pd.read_csv(template_path)
 
 # Convert date columns to datetime and then format them as MM/DD/YY
 for col in ['bill_date', 'paid_date']:
@@ -114,8 +122,24 @@ if min_date.strftime('%Y%m') == max_date.strftime('%Y%m'):
 else:
     date_range = f"{min_date.strftime('%Y_%m')}-{max_date.strftime('%m')}"
 
-# Save to new file with date range in name using absolute path
-output_filename = os.path.join(project_root, 'output', f'receipts_{date_range}.csv')
+# Save to new file with date range in name, under output/YYYY/
+output_dir = os.path.join(project_root, 'output', str(data_year))
+os.makedirs(output_dir, exist_ok=True)
+output_filename = os.path.join(output_dir, f'receipts_{date_range}.csv')
+
+if os.path.isfile(output_filename):
+    answer = input(f"\n{output_filename} already exists. Overwrite? (y/N): ").strip().lower()
+    if answer != 'y':
+        print("Aborted.")
+        exit(0)
+
 df.to_csv(output_filename, index=False)
 
 print(f"Processed file saved as: {output_filename}")
+
+answer = input(f"\nClear output/receipts.csv? (y/N): ").strip().lower()
+if answer == 'y':
+    open(input_path, 'w').close()
+    print("receipts.csv cleared.")
+else:
+    print("receipts.csv left intact.")
