@@ -4,6 +4,18 @@
 # Config file with API keys
 config.json
 
+# Project-specific ignores
+docs/
+.claude/*
+!.claude/skills
+output/
+src/prompts/bk/
+src/prompts/corrections.txt
+src/prompts/corrections_*.txt
+test/eval_images/
+test/*.jpg
+wrangle/monthly_template.csv
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/

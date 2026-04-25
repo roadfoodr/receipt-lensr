@@ -1,0 +1,12 @@
+# corrections.example.txt
+# Copy this file to corrections.txt and add your own vendor/field corrections.
+# The AI will apply these rules after extracting data from each receipt.
+# Format: natural language rules describing when and how to override extracted fields.
+
+- When vendor is "ACME CORP", change vendor to "Acme Corp"
+- When vendor includes "Acme", change expense_type to "Supplies"
+- When payment_method is "1234", change payment_method to "VISA"
+- When vendor is "Spotify USA Inc", change vendor to "Spotify"
+- When vendor includes "Spotify", change item_type to "Subscription"
+- When paid_date is "not found", change paid_date to use the same value as bill_date
+- When payment_method is "not found" and there is a "paypal.com" email address anywhere on the image, change payment_method to "PayPal"

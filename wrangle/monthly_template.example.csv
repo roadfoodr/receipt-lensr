@@ -1,0 +1,3 @@
+vendor,invoice,bill_date,paid_date,payment_method,total_amount,item_type,item,project,expense_type
+Spotify,,2,2,PayPal,19.99,Subscription,Monthly Premium,General,General
+Stamps.com,,4,4,AMEX,19.99,service fee,,General,Promotion
