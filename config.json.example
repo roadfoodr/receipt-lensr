@@ -4,5 +4,8 @@
     "use_vendor": "openai",
     "openai_model": "gpt-5.4-mini",
     "anthropic_model": "claude-sonnet-4-6",
-    "debug_mode": false
+    "debug_mode": false,
+    "eval_images_dir": "test/eval_images/",
+    "eval_vendors": ["openai", "anthropic"],
+    "eval_prompt_methods": ["single_prompt"]
 }

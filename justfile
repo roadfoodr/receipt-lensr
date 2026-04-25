@@ -1,8 +1,13 @@
+[private]
 default:
-    @just --list
+    @just --list --unsorted
+
+launch:
+    uv run python main.py
+
+eval:
+    uv run python main.py --eval
 
 test-vision image="test/test_receipt.jpg":
     uv run python test/test_vision.py {{image}}
 
-ui:
-    uv run python main.py

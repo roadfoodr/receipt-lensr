@@ -609,15 +609,13 @@ class ReceiptProcessor(ctk.CTk):
         self.current_receipt = None
 
 if __name__ == "__main__":
-    # Check if eval mode is enabled
-    config = load_config()
-    if config.get('eval_mode', False):
+    import sys
+    if "--eval" in sys.argv:
         print("Running in evaluation mode...")
         from src.evals.evaluation_manager import EvaluationManager
         manager = EvaluationManager()
         manager.run_evaluations()
     else:
-        # Run interactive UI as before
         app = ReceiptProcessor()
         app.protocol("WM_DELETE_WINDOW", app.on_closing)
         app.mainloop()
