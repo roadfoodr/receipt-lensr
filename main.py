@@ -107,8 +107,16 @@ class ReceiptProcessor(ctk.CTk):
                 override_label = ctk.CTkLabel(self.right_scroll, text="Override")
                 override_label.grid(row=0, column=2, padx=5, pady=5)
                 
-                lock_label = ctk.CTkLabel(self.right_scroll, text="Lock")
-                lock_label.grid(row=0, column=3, padx=5, pady=5)
+                self.lock_all_checkbox = ctk.CTkCheckBox(
+                    self.right_scroll,
+                    text="Lock",
+                    width=20,
+                    border_width=1,
+                    fg_color=["#3B8ED0", "#1F6AA5"],
+                    border_color=["#3B8ED0", "#1F6AA5"],
+                    command=self.toggle_all_locks
+                )
+                self.lock_all_checkbox.grid(row=0, column=3, padx=5, pady=5)
             
             label = ctk.CTkLabel(self.right_scroll, text=f"{field.replace('_', ' ').title()}:")
             label.grid(row=idx+1, column=0, padx=5, pady=5, sticky="e")  # Shift down by 1
@@ -580,6 +588,15 @@ class ReceiptProcessor(ctk.CTk):
             self.status_label.configure(text=f"Error reloading corrections: {e}")
             self.after(2000, lambda: self.status_label.configure(text=""))
 
+    def toggle_all_locks(self):
+        """Set all row lock checkboxes to match the header checkbox state"""
+        if self.lock_all_checkbox.get():
+            for field in self.fields_to_display:
+                self.field_locks[field].select()
+        else:
+            for field in self.fields_to_display:
+                self.field_locks[field].deselect()
+
     def clear_form(self):
         """Clear all form fields, overrides, checkboxes, and entries"""
         # Clear all field values and override entries
@@ -594,9 +611,11 @@ class ReceiptProcessor(ctk.CTk):
             
             # Uncheck lock checkbox
             self.field_locks[field].deselect()
-            
+
             # Disable correction button
             self.field_corrections[field].configure(state="disabled")
+
+        self.lock_all_checkbox.deselect()
         
         # Clear correction entry
         self.correction_entry.delete(0, 'end')
