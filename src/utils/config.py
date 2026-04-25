@@ -47,6 +47,16 @@ def get_api_key(vendor: str) -> str:
         raise ValueError(f"Unsupported vendor: {vendor}")
     return config.get(key_name)
 
+def get_model(vendor: str) -> str:
+    """Get model name for specified vendor"""
+    config = load_config()
+    defaults = {
+        'openai': 'gpt-4o-mini',
+        'anthropic': 'claude-3-5-sonnet-20241022',
+    }
+    key = f'{vendor.lower()}_model'
+    return config.get(key, defaults.get(vendor.lower(), ''))
+
 def get_debug_mode() -> bool:
     """Get debug mode setting"""
     config = load_config()

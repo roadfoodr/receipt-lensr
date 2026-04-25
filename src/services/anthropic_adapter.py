@@ -6,7 +6,8 @@ class AnthropicVisionAdapter(VisionAdapter):
     def __init__(self, api_key: str):
         super().__init__(api_key)
         self.api_url = "https://api.anthropic.com/v1/messages"
-        self.model = "claude-3-5-sonnet-20241022"
+        from src.utils.config import get_model
+        self.model = get_model('anthropic')
         self.headers = {
             "x-api-key": api_key,
             "anthropic-version": "2023-06-01",

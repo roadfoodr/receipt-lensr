@@ -5,52 +5,50 @@ from .vision_adapter import VisionAdapter
 class OpenAIVisionAdapter(VisionAdapter):
     def __init__(self, api_key: str):
         super().__init__(api_key)
-        self.api_url = "https://api.openai.com/v1/chat/completions"
-        self.model = "gpt-4o-mini"
+        self.api_url = "https://api.openai.com/v1/responses"
+        from src.utils.config import get_model
+        self.model = get_model('openai')
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
-        
-        # Add debug print
+
         from src.utils.config import get_debug_mode
         if get_debug_mode():
             print(f"\n=== Using OpenAI Model: {self.model} ===\n")
 
     def analyze_receipt(self, image_bytes: bytes, prompt: str) -> str:
         try:
-            # Convert image to base64
             base64_image = base64.b64encode(image_bytes).decode('utf-8')
-            
-            # Construct API payload
+
             payload = {
                 "model": self.model,
-                "messages": [
+                "instructions": "You are a helpful assistant that extracts structured data from images of receipts.",
+                "input": [
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": prompt},
+                            {"type": "input_text", "text": prompt},
                             {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_image}"
-                                }
+                                "type": "input_image",
+                                "image_url": f"data:image/jpeg;base64,{base64_image}"
                             }
                         ]
                     }
                 ],
-                "max_tokens": 1024
+                "max_output_tokens": 1024
             }
 
-            # Make API request
             response = requests.post(
                 self.api_url,
                 headers=self.headers,
                 json=payload
             )
             response.raise_for_status()
-            
-            return response.json()['choices'][0]['message']['content']
-                
+
+            output = response.json()['output']
+            message = next(item for item in output if item['type'] == 'message')
+            return message['content'][0]['text']
+
         except Exception as e:
             raise Exception(f"OpenAI API request failed: {str(e)}") 

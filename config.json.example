@@ -1,5 +1,8 @@
 {
     "openai_api_key": "YOUR_OPENAI_API_KEY",
     "anthropic_api_key": "YOUR_ANTHROPIC_API_KEY",
-    "use_anthropic": false
+    "use_vendor": "openai",
+    "openai_model": "gpt-5.4-mini",
+    "anthropic_model": "claude-sonnet-4-6",
+    "debug_mode": false
 }
