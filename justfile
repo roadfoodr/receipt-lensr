@@ -11,6 +11,9 @@ eval:
 test-vision image="test/test_receipt.jpg":
     uv run python test/test_vision.py {{image}}
 
+travel-consolidate:
+    uv run python wrangle/travel-consolidate.py
+
 post-process:
     uv run python wrangle/post-process.py
 
