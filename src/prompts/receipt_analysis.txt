@@ -19,6 +19,7 @@ Fields to identify:
                   or "AMEX" (if the word AMEX or "PD AMEX" or "American Express" is present),
                   or "VISA" (if the word "VISA" or "Visa" or "PD VISA" is present),
                   or "PayPal" (if the word "PayPal" or "paypal.com" or "PD PayPal" is present anywhere)
+                  or "Zelle" (if the word "Zelle" or the phrase "You sent money with Zelle" is present)
 - item_type: brief (2-4 words) description of the general item type.  Some examples:
                 - "Graphic Design services"  
                 - "Supplies"  

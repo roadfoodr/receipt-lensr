@@ -465,7 +465,7 @@ class ReceiptProcessor(ctk.CTk):
         # Create output directory if it doesn't exist
         os.makedirs('./output', exist_ok=True)
         csv_file = './output/receipts.csv'
-        file_exists = os.path.isfile(csv_file)
+        file_exists = os.path.isfile(csv_file) and os.path.getsize(csv_file) > 0
         
         try:
             with open(csv_file, mode='a', newline='') as f:
